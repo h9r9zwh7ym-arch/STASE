@@ -254,6 +254,37 @@ body.no-chrome .tabbar, body.no-chrome .fab { display: none; }
 .progress { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .progress > span { display: block; height: 100%; border-radius: 3px; background: var(--mint); }
 
+/* Aujourd'hui : navigation jour, compteur, boutons de relevé, lignes */
+.day-nav { display: flex; align-items: center; gap: 4px; margin: 0 -12px; }
+.day-nav .label { flex: 1; text-align: center; }
+.icon-btn--ghost { background: transparent; color: var(--text-3); }
+.icon-btn:disabled { opacity: 0.3; }
+.counter { display: flex; align-items: baseline; gap: 14px; }
+.counter .muted { font-size: 17px; }
+.log-btn {
+  height: 96px; border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--line); color: var(--text);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-family: var(--font-num); font-size: 22px; font-weight: 600;
+  transition: transform .08s, background .15s;
+}
+.log-btn:active { transform: scale(0.97); background: var(--surface-2); }
+.entry {
+  width: 100%; min-height: 60px; padding: 0 2px; display: flex; align-items: center; gap: 14px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--line); text-align: left;
+}
+.entry__time { width: 52px; font-size: 17px; font-weight: 500; }
+.entry__kind { width: 68px; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.entry__ctx { flex: 1; font-size: 14px; color: var(--text-2); }
+.entry__ctx.faint { color: var(--text-3); }
+.marker { width: 8px; height: 8px; background: var(--text-2); }
+.marker--snus { border-radius: 2px; }
+.marker--vape { border-radius: 4px; }
+.dots { display: flex; gap: 4px; }
+.dots span { width: 6px; height: 6px; border-radius: 3px; background: var(--line); }
+.dots span.on { background: var(--warm); }
+input[type="datetime-local"] { width: 100%; border: 0; outline: none; background: transparent; font-family: var(--font-num); font-size: 16px; min-height: 44px; }
+
 /* =========================================================================
    6. Feuille du bas, toast
    ========================================================================= */
@@ -467,6 +498,7 @@ const Store = {
         vapeSessionsPerUnit: 0,      // sessions de vape par capsule ou flacon
         reduction: { on: false, startDate: null, weeklyStep: 1 },
         theme: 'dark',               // 'dark' | 'light'
+        askContext: true,            // ouvrir la feuille contexte après « + Snus / + Vape »
         lastExportAt: null
       },
       intakes: [],   // { id, type, ts, trigger, intensity }
@@ -489,6 +521,7 @@ const Store = {
   },
 
   save() {
+    if (App.testMode) return; // ?test ne touche jamais aux vraies données
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Store.data));
       Store.saveFailed = false;
@@ -514,6 +547,7 @@ const Store = {
     if (!['observation', 'arret'].includes(s.phase)) s.phase = 'observation';
     if (!['dark', 'light'].includes(s.theme)) s.theme = 'dark';
     if (!['capsule', 'flacon'].includes(s.vapeFormat)) s.vapeFormat = 'capsule';
+    s.askContext = s.askContext !== false;
     ['snusBoxPrice', 'snusPerBox', 'snusMg', 'vapeUnitPrice', 'vapeSessionsPerUnit'].forEach((k) => {
       const n = Number(s[k]);
       s[k] = Number.isFinite(n) && n >= 0 ? n : base.settings[k];
@@ -607,12 +641,98 @@ const Store = {
 };
 
 /* =========================================================================
+   Calc — fonctions pures (sans DOM), testées dans ?test
+   ========================================================================= */
+const Calc = {
+  /** Entrées dont le jour local correspond à la clé. */
+  onDay(list, key) {
+    return list.filter((x) => Dates.dayKey(x.ts) === key);
+  },
+
+  /** Compte snus / vape / total d'une liste de prises. */
+  countByType(list) {
+    const snus = list.filter((x) => x.type === 'snus').length;
+    return { snus, vape: list.length - snus, total: list.length };
+  },
+
+  /** Comptes par jour, de fromKey à toKey inclus (jours sans prise = 0). */
+  dailyCounts(intakes, fromKey, toKey) {
+    const byDay = {};
+    intakes.forEach((x) => {
+      const k = Dates.dayKey(x.ts);
+      byDay[k] = byDay[k] || [];
+      byDay[k].push(x);
+    });
+    return Dates.range(fromKey, toKey).map((key) => ({ key, ...Calc.countByType(byDay[key] || []) }));
+  },
+
+  /**
+   * Moyenne quotidienne sur les n jours complets précédant `todayKey`
+   * (aujourd'hui exclu, car incomplet). Si l'historique est plus court,
+   * on part du jour de la première prise. Renvoie null sans jour complet.
+   */
+  avgPerDay(intakes, todayKey, n = 7) {
+    if (!intakes.length) return null;
+    const first = Dates.dayKey(intakes[0].ts);
+    let from = Dates.addDays(todayKey, -n);
+    if (Dates.diffDays(from, first) > 0) from = first;
+    const to = Dates.addDays(todayKey, -1);
+    if (Dates.diffDays(from, to) < 0) return null;
+    const days = Calc.dailyCounts(intakes, from, to);
+    const sum = (k) => days.reduce((acc, d) => acc + d[k], 0) / days.length;
+    return { total: sum('total'), snus: sum('snus'), vape: sum('vape'), days: days.length };
+  }
+};
+
+/* =========================================================================
+   Intakes — ajout, modification, suppression des prises
+   ========================================================================= */
+const Intakes = {
+  /** Marge tolérée dans le futur (horloge légèrement décalée). */
+  FUTURE_TOLERANCE: 5 * 60000,
+
+  find(id) { return Store.data.intakes.find((x) => x.id === id) || null; },
+
+  isValidTs(ts) { return Number.isFinite(ts) && ts <= Date.now() + Intakes.FUTURE_TOLERANCE; },
+
+  sort() { Store.data.intakes.sort((a, b) => a.ts - b.ts); },
+
+  /** Crée une prise et renvoie son id. */
+  add(type, ts, trigger = null, intensity = null) {
+    const entry = { id: Util.uid(), type, ts, trigger, intensity };
+    Store.data.intakes.push(entry);
+    Intakes.sort();
+    Store.save();
+    return entry.id;
+  },
+
+  /** Modifie une prise existante (type, heure, contexte). */
+  edit(id, patch) {
+    const entry = Intakes.find(id);
+    if (!entry) return false;
+    Object.assign(entry, patch);
+    Intakes.sort();
+    Store.save();
+    return true;
+  },
+
+  remove(id) {
+    const before = Store.data.intakes.length;
+    Store.data.intakes = Store.data.intakes.filter((x) => x.id !== id);
+    Store.save();
+    return Store.data.intakes.length < before;
+  }
+};
+
+/* =========================================================================
    Icônes (traits SVG)
    ========================================================================= */
 const Icon = {
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>'
 };
 
 /* =========================================================================
@@ -667,16 +787,70 @@ const UI = {
    Écrans — chaque fonction renvoie le HTML d'un écran.
    ========================================================================= */
 const Screens = {
+  /** Aujourd'hui — phase observation : compteur, relevé en un tap, liste du jour. */
   aujourdhui() {
+    const today = Dates.todayKey();
+    const key = App.viewDay || today;
+    const isToday = key === today;
+    const list = Calc.onDay(Store.data.intakes, key);
+    const c = Calc.countByType(list);
+    const avg = Calc.avgPerDay(Store.data.intakes, today);
     return `<div class="screen">
       <header class="header"><span class="wordmark">STASE</span><span class="pill">Observation</span></header>
-      <section class="stack">
-        <span class="label">${Util.esc(Dates.formatDayLong(Date.now()))}</span>
-        <div class="card card--empty">
-          <strong>Le socle est en place.</strong>
-          <span class="muted small">Le relevé en un tap arrive à l'étape 2.</span>
+
+      <section class="stack" style="gap:6px">
+        ${Screens.dayNav(key, isToday)}
+        <div class="counter">
+          <span class="big-number">${c.total}</span>
+          <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ${isToday ? 'aujourd’hui' : 'ce jour-là'}</span>
         </div>
+        <p class="small muted">${c.snus} snus <span class="faint">·</span> ${c.vape} vape${avg ? ` <span class="faint">·</span> moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}` : ''}</p>
       </section>
+
+      ${isToday ? `<div class="grid-2">
+        <button type="button" class="log-btn" data-action="add-intake" data-type="snus">${Icon.plus}Snus</button>
+        <button type="button" class="log-btn" data-action="add-intake" data-type="vape">${Icon.plus}Vape</button>
+      </div>` : ''}
+
+      <section class="stack" style="gap:0">
+        <div class="row" style="padding-bottom:8px">
+          <h2 style="font-size:15px">${isToday ? 'Prises du jour' : 'Prises de ce jour'}</h2>
+          ${list.length ? '<span class="small faint">Touche une ligne pour modifier</span>' : ''}
+        </div>
+        ${list.length ? list.slice().reverse().map(Screens.intakeRow).join('') : Screens.todayEmpty(isToday)}
+        <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
+      </section>
+    </div>`;
+  },
+
+  /** Navigation entre les jours (pour corriger un jour passé). */
+  dayNav(key, isToday) {
+    const label = (isToday ? 'Aujourd’hui · ' : '') + Dates.formatDayLong(Dates.keyToStart(key));
+    return `<div class="day-nav">
+      <button type="button" class="icon-btn icon-btn--ghost" data-action="day-prev" aria-label="Jour précédent">${Icon.prev}</button>
+      <span class="label">${Util.esc(label)}</span>
+      <button type="button" class="icon-btn icon-btn--ghost" data-action="day-next" aria-label="Jour suivant" ${isToday ? 'disabled' : ''}>${Icon.next}</button>
+    </div>`;
+  },
+
+  intakeRow(x) {
+    const label = x.trigger ? TRIGGER_LABEL[x.trigger] : 'Sans contexte';
+    const dots = [1, 2, 3, 4, 5].map((i) => `<span class="${x.intensity && i <= x.intensity ? 'on' : ''}"></span>`).join('');
+    return `<button type="button" class="entry" data-action="open-intake" data-id="${Util.esc(x.id)}"
+        aria-label="Modifier la prise de ${Dates.formatTime(x.ts)}">
+      <span class="entry__time num">${Dates.formatTime(x.ts)}</span>
+      <span class="entry__kind"><span class="marker marker--${x.type}"></span>${x.type === 'snus' ? 'Snus' : 'Vape'}</span>
+      <span class="entry__ctx ${x.trigger ? '' : 'faint'}">${label}</span>
+      <span class="dots" aria-label="${x.intensity ? `Intensité ${x.intensity} sur 5` : 'Intensité non notée'}">${dots}</span>
+    </button>`;
+  },
+
+  todayEmpty(isToday) {
+    return `<div class="card card--empty">
+      <strong>${isToday ? 'Rien de noté aujourd’hui.' : 'Rien de noté ce jour-là.'}</strong>
+      <span class="muted small">${isToday
+        ? 'Touche « + Snus » ou « + Vape » au moment d’une prise. L’heure est notée toute seule, le reste est facultatif.'
+        : 'Si tu as oublié une prise, ajoute-la ci-dessous avec son heure.'}</span>
     </div>`;
   },
 
@@ -708,6 +882,13 @@ const Screens = {
       <section class="stack">
         <h2 class="label">Apparence</h2>
         ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
+      </section>
+
+      <section class="stack">
+        <h2 class="label">Relevé</h2>
+        <div class="group">
+          ${Screens.toggle('askContext', 'Demander le contexte', 'Après « + Snus » ou « + Vape », ouvrir le choix du déclencheur', s.askContext)}
+        </div>
       </section>
 
       <section class="stack">
@@ -757,11 +938,131 @@ const Screens = {
     </label>`;
   },
 
+  /** Ligne avec interrupteur lié à un réglage booléen. */
+  toggle(key, label, hint, on) {
+    return `<div class="field">
+      <span class="field__label"><span>${Util.esc(label)}</span>${hint ? `<span class="tiny faint">${Util.esc(hint)}</span>` : ''}</span>
+      <button type="button" class="switch" role="switch" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-action="toggle-setting" data-key="${key}"></button>
+    </div>`;
+  },
+
   /** Contrôle segmenté lié à un réglage. */
-  segmented(key, options, current, label) {
+  segmented(key, options, current, label, action = 'set-setting') {
     return `<div class="segmented" role="group" aria-label="${Util.esc(label)}">${options.map(([value, text]) =>
-      `<button type="button" data-action="set-setting" data-key="${key}" data-value="${value}" aria-pressed="${value === current}">${text}</button>`
+      `<button type="button" data-action="${action}" data-key="${key}" data-value="${value}" aria-pressed="${value === current}">${text}</button>`
     ).join('')}</div>`;
+  }
+};
+
+/* =========================================================================
+   Feuille « prise » — trois modes :
+   - context : juste après « + Snus / + Vape » (la prise est déjà enregistrée)
+   - edit    : modifier ou supprimer une prise existante
+   - new     : ajouter une prise oubliée, avec son heure
+   L'état en cours d'édition vit dans UI.sheetState jusqu'à « Enregistrer ».
+   ========================================================================= */
+const IntakeSheet = {
+  open(state) {
+    UI.sheetState = state;
+    UI.openSheet(IntakeSheet.html(state), 'Prise');
+  },
+  refresh() { UI.updateSheet(IntakeSheet.html(UI.sheetState)); },
+
+  /** Ouvre la feuille d'une prise existante. */
+  openFor(id, mode) {
+    const x = Intakes.find(id);
+    if (!x) return;
+    IntakeSheet.open({ mode, id, type: x.type, ts: x.ts, trigger: x.trigger, intensity: x.intensity, confirmDelete: false });
+  },
+
+  html(st) {
+    if (st.confirmDelete) return IntakeSheet.confirmHtml(st);
+    const title = {
+      context: `Prise de ${Dates.formatTime(st.ts)} · ${st.type === 'snus' ? 'Snus' : 'Vape'}`,
+      edit: 'Modifier la prise',
+      new: 'Ajouter une prise'
+    }[st.mode];
+    return `
+      <div class="stack" style="gap:6px">
+        <h2 class="title" style="font-size:22px">${title}</h2>
+        ${st.mode === 'context' ? '<p class="small muted">Facultatif. Ça aide à repérer tes moments.</p>' : ''}
+      </div>
+      ${st.mode === 'context' ? '' : IntakeSheet.whenHtml(st)}
+      ${IntakeSheet.triggersHtml(st.trigger)}
+      ${IntakeSheet.intensityHtml(st.intensity)}
+      ${IntakeSheet.buttonsHtml(st)}`;
+  },
+
+  whenHtml(st) {
+    return `${Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], st.type, 'Type', 'sheet-type')}
+      <label class="stack">
+        <span class="label">Date et heure</span>
+        <span class="field__box" style="width:100%"><input type="datetime-local" data-sheet="ts"
+          value="${Dates.toInputValue(st.ts)}" max="${Dates.toInputValue(Date.now())}" style="text-align:left"></span>
+      </label>`;
+  },
+
+  triggersHtml(current) {
+    return `<div class="stack">
+      <span class="label">Déclencheur</span>
+      <div class="grid-3">${TRIGGERS.map(([k, label]) =>
+        `<button type="button" class="chip" data-action="sheet-trigger" data-value="${k}" aria-pressed="${current === k}">${label}</button>`).join('')}</div>
+    </div>`;
+  },
+
+  intensityHtml(current) {
+    return `<div class="stack">
+      <span class="label">Intensité de l'envie</span>
+      <div class="grid-5 scale--warm">${[1, 2, 3, 4, 5].map((n) =>
+        `<button type="button" class="scale-btn" data-action="sheet-intensity" data-value="${n}" aria-pressed="${current === n}" aria-label="Intensité ${n} sur 5">${n}</button>`).join('')}</div>
+      <div class="row tiny faint"><span>légère</span><span>forte</span></div>
+    </div>`;
+  },
+
+  buttonsHtml(st) {
+    if (st.mode === 'context') {
+      return `<div class="grid-2">
+          <button type="button" class="btn" data-action="close-sheet">Plus tard</button>
+          <button type="button" class="btn btn--primary" data-action="sheet-save">Enregistrer</button>
+        </div>
+        <button type="button" class="link" data-action="sheet-undo" style="align-self:center;margin-top:-12px">Annuler cette prise</button>`;
+    }
+    if (st.mode === 'edit') {
+      return `<div class="grid-2">
+          <button type="button" class="btn" data-action="sheet-ask-delete">Supprimer</button>
+          <button type="button" class="btn btn--primary" data-action="sheet-save">Enregistrer</button>
+        </div>`;
+    }
+    return `<div class="grid-2">
+        <button type="button" class="btn" data-action="close-sheet">Fermer</button>
+        <button type="button" class="btn btn--primary" data-action="sheet-save">Ajouter</button>
+      </div>`;
+  },
+
+  confirmHtml(st) {
+    return `<h2 class="title" style="font-size:22px">Supprimer cette prise ?</h2>
+      <p class="muted small">${st.type === 'snus' ? 'Snus' : 'Vape'} du ${Util.esc(Dates.formatDayShort(st.ts))} à ${Dates.formatTime(st.ts)}.</p>
+      <div class="grid-2">
+        <button type="button" class="btn" data-action="sheet-cancel-delete">Garder</button>
+        <button type="button" class="btn btn--surface" data-action="sheet-delete">Supprimer</button>
+      </div>`;
+  },
+
+  /** Enregistre l'état de la feuille dans les données. */
+  save() {
+    const st = UI.sheetState;
+    if (!st) return;
+    if (!Intakes.isValidTs(st.ts)) { UI.toast('Cette heure est dans le futur.'); return; }
+    if (st.mode === 'new') {
+      Intakes.add(st.type, st.ts, st.trigger, st.intensity);
+      App.viewDay = Dates.dayKey(st.ts) === Dates.todayKey() ? null : Dates.dayKey(st.ts);
+      UI.toast(`Prise ajoutée : ${Dates.formatDayShort(st.ts)}, ${Dates.formatTime(st.ts)}.`);
+    } else {
+      Intakes.edit(st.id, { type: st.type, ts: st.ts, trigger: st.trigger, intensity: st.intensity });
+      if (st.mode === 'edit') UI.toast('Prise modifiée.');
+    }
+    UI.closeSheet();
+    App.render();
   }
 };
 
@@ -770,6 +1071,69 @@ const Screens = {
    ========================================================================= */
 const Actions = {
   'close-sheet'() { UI.closeSheet(); },
+
+  /* ---- Relevé ---- */
+  'add-intake'(el) {
+    const type = el.dataset.type;
+    const id = Intakes.add(type, Date.now());
+    App.render();
+    if (Store.data.settings.askContext) {
+      IntakeSheet.openFor(id, 'context');
+    } else {
+      UI.toast(`${type === 'snus' ? 'Snus' : 'Vape'} noté à ${Dates.formatTime(Date.now())}.`, 'Annuler', () => {
+        Intakes.remove(id); App.render(); UI.toast('Prise annulée.');
+      }, 6000);
+    }
+  },
+  'open-intake'(el) { IntakeSheet.openFor(el.dataset.id, 'edit'); },
+  'new-intake'() {
+    const today = Dates.todayKey();
+    // Pour un jour passé, on propose midi ce jour-là ; sinon maintenant.
+    const ts = App.viewDay && App.viewDay !== today ? Dates.keyToStart(App.viewDay) + 12 * 3600000 : Date.now();
+    IntakeSheet.open({ mode: 'new', id: null, type: 'snus', ts, trigger: null, intensity: null, confirmDelete: false });
+  },
+  'sheet-type'(el) { UI.sheetState.type = el.dataset.value; IntakeSheet.refresh(); },
+  'sheet-trigger'(el) {
+    const st = UI.sheetState;
+    st.trigger = st.trigger === el.dataset.value ? null : el.dataset.value;
+    IntakeSheet.refresh();
+  },
+  'sheet-intensity'(el) {
+    const st = UI.sheetState;
+    const n = Number(el.dataset.value);
+    st.intensity = st.intensity === n ? null : n;
+    IntakeSheet.refresh();
+  },
+  'sheet-save'() { IntakeSheet.save(); },
+  'sheet-undo'() {
+    Intakes.remove(UI.sheetState.id);
+    UI.closeSheet();
+    App.render();
+    UI.toast('Prise annulée.');
+  },
+  'sheet-ask-delete'() { UI.sheetState.confirmDelete = true; IntakeSheet.refresh(); },
+  'sheet-cancel-delete'() { UI.sheetState.confirmDelete = false; IntakeSheet.refresh(); },
+  'sheet-delete'() {
+    const removed = Intakes.find(UI.sheetState.id);
+    Intakes.remove(UI.sheetState.id);
+    UI.closeSheet();
+    App.render();
+    UI.toast('Prise supprimée.', 'Annuler', () => {
+      Store.data.intakes.push(removed); Intakes.sort(); Store.save(); App.render();
+    }, 6000);
+  },
+
+  /* ---- Navigation entre les jours ---- */
+  'day-prev'() { App.viewDay = Dates.addDays(App.viewDay || Dates.todayKey(), -1); App.render(); },
+  'day-next'() {
+    const next = Dates.addDays(App.viewDay || Dates.todayKey(), 1);
+    App.viewDay = Dates.diffDays(next, Dates.todayKey()) <= 0 ? null : next;
+    App.render();
+  },
+  'toggle-setting'(el) {
+    const key = el.dataset.key;
+    Store.update((d) => { d.settings[key] = !d.settings[key]; });
+  },
 
   'set-setting'(el) {
     Store.update((d) => { d.settings[el.dataset.key] = el.dataset.value; });
@@ -852,6 +1216,11 @@ const Backup = {
    ========================================================================= */
 const App = {
   routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie'],
+  testMode: false,
+  /** Jour affiché sur « Aujourd'hui » (null = aujourd'hui). */
+  viewDay: null,
+  /** Dernier jour local vu : sert à détecter minuit ou un changement de fuseau. */
+  lastDayKey: null,
   /** Écrans sans barre d'onglets ni bouton flottant. */
   focused: ['envie'],
 
@@ -860,7 +1229,17 @@ const App = {
     return App.routes.includes(name) ? name : 'aujourdhui';
   },
 
+  /** Redessine si le jour local a changé (minuit, fuseau, retour dans l'app). */
+  checkDayChange() {
+    const key = Dates.todayKey();
+    if (key === App.lastDayKey) return;
+    App.lastDayKey = key;
+    App.viewDay = null;
+    if (!UI.sheetState) App.render();
+  },
+
   render() {
+    App.lastDayKey = Dates.todayKey();
     const name = App.route();
     const view = document.getElementById('view');
     view.innerHTML = Screens[name]();
@@ -885,6 +1264,11 @@ const App = {
       input.value = '';
       return;
     }
+    if (input.dataset.sheet === 'ts' && UI.sheetState) {
+      const ts = Dates.fromInputValue(input.value);
+      if (ts !== null) UI.sheetState.ts = ts;
+      return;
+    }
     const key = input.dataset.setting;
     if (!key) return;
     const n = Util.parseNum(input.value);
@@ -902,8 +1286,10 @@ const App = {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     document.addEventListener('click', App.onClick);
     document.addEventListener('change', App.onChange);
-    window.addEventListener('hashchange', () => { App.render(); document.getElementById('view').scrollTop = 0; });
-    if (new URLSearchParams(location.search).has('test')) { Tests.run(); return; }
+    window.addEventListener('hashchange', () => { App.viewDay = null; App.render(); document.getElementById('view').scrollTop = 0; });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) App.checkDayChange(); });
+    setInterval(App.checkDayChange, 30000);
+    if (new URLSearchParams(location.search).has('test')) { App.testMode = true; Tests.run(); return; }
     App.render();
   }
 };
@@ -999,6 +1385,56 @@ Tests.add('export puis import redonne les mêmes données', () => {
 Tests.add('import refuse un fichier étranger', () => {
   Tests.eq(Store.parseImport('pas du json').ok, false);
   Tests.eq(Store.parseImport('{"foo":1}').ok, false);
+});
+
+/* ---- Étape 2 : relevé et calculs du jour ---- */
+Tests.add('dailyCounts répartit par jour local, minuit compris', () => {
+  const t = (d, h, m) => new Date(2026, 9, d, h, m).getTime();
+  const list = [
+    { type: 'snus', ts: t(5, 23, 58) }, { type: 'vape', ts: t(6, 0, 2) },
+    { type: 'vape', ts: t(6, 12, 0) }, { type: 'snus', ts: t(8, 9, 0) }
+  ];
+  const days = Calc.dailyCounts(list, '2026-10-05', '2026-10-08');
+  Tests.eq(days.map((d) => d.total), [1, 2, 0, 1]);
+  Tests.eq(days[1], { key: '2026-10-06', snus: 0, vape: 2, total: 2 });
+});
+Tests.add('moyenne 7 j : aujourd’hui exclu, historique court pris en compte', () => {
+  const t = (d, h) => new Date(2026, 9, d, h).getTime();
+  Tests.eq(Calc.avgPerDay([], '2026-10-10'), null);
+  // Une seule prise aujourd'hui : pas encore de jour complet.
+  Tests.eq(Calc.avgPerDay([{ type: 'snus', ts: t(10, 9) }], '2026-10-10'), null);
+  // Deux jours complets (8 et 9) : 3 puis 1 prises → 2 par jour.
+  const list = [8, 8, 8, 9, 10].map((d) => ({ type: 'snus', ts: t(d, 10) }));
+  const avg = Calc.avgPerDay(list, '2026-10-10');
+  Tests.eq(avg.days, 2);
+  Tests.near(avg.total, 2);
+});
+Tests.add('moyenne 7 j : fenêtre glissante de 7 jours', () => {
+  const t = (d) => new Date(2026, 9, d, 10).getTime();
+  const list = [];
+  for (let d = 1; d <= 14; d++) for (let i = 0; i < d; i++) list.push({ type: i % 2 ? 'vape' : 'snus', ts: t(d) });
+  const avg = Calc.avgPerDay(list, '2026-10-15');
+  Tests.eq(avg.days, 7);
+  Tests.near(avg.total, (8 + 9 + 10 + 11 + 12 + 13 + 14) / 7);
+});
+Tests.add('ajout, modification, suppression d’une prise', () => {
+  const saved = Store.data;
+  Store.data = Store.defaults();
+  const id = Intakes.add('snus', new Date(2026, 9, 7, 14, 32).getTime());
+  Intakes.add('vape', new Date(2026, 9, 7, 9, 0).getTime());
+  Tests.eq(Store.data.intakes[0].type, 'vape');
+  Intakes.edit(id, { trigger: 'stress', intensity: 4, ts: new Date(2026, 9, 6, 22, 0).getTime() });
+  Tests.eq(Calc.onDay(Store.data.intakes, '2026-10-06').length, 1);
+  Tests.eq(Intakes.find(id).trigger, 'stress');
+  Tests.eq(Intakes.remove(id), true);
+  Tests.eq(Store.data.intakes.length, 1);
+  Store.data = saved;
+  Store.save();
+});
+Tests.add('une heure dans le futur est refusée', () => {
+  Tests.eq(Intakes.isValidTs(Date.now() + 3600000), false);
+  Tests.eq(Intakes.isValidTs(Date.now() - 60000), true);
+  Tests.eq(Intakes.isValidTs(NaN), false);
 });
 
 App.boot();
