@@ -366,6 +366,37 @@ details.benefit[open] .benefit__more { display: none; }
 .tl__text { font-size: 14px; line-height: 1.5; color: var(--text-2); }
 .tl--future .tl__title, .tl--future .tl__text { color: var(--text-3); }
 
+/* J'ai une envie : tes raisons */
+.reason { align-self: stretch; border: 1px solid var(--line); border-radius: 20px; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; min-height: 104px; }
+.reason p { margin: 0; font-size: 15px; line-height: 1.5; }
+.reason__dots { display: flex; gap: 5px; margin-top: auto; }
+.reason__dots i { width: 5px; height: 5px; border-radius: 3px; background: var(--line-2); transition: background .3s, width .3s; }
+.reason__dots i.on { background: var(--mint); width: 14px; }
+.reason--in { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Constats */
+.insight { margin: 0; font-size: 15px; line-height: 1.5; padding-left: 16px; position: relative; }
+.insight::before { content: ''; position: absolute; left: 0; top: 0.6em; width: 6px; height: 6px; border-radius: 3px; background: var(--mint); }
+
+/* Calendrier du mois */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+@media (max-width: 360px) { .cal { gap: 3px; } .cal__day i { display: none; } }
+.cal__head { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-3); padding-bottom: 2px; }
+.cal__day { aspect-ratio: 1; min-width: 0; border: 0; border-radius: 10px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: var(--surface-2); color: var(--text-2); font-family: var(--font-num); font-size: 13px; font-weight: 600; }
+.cal__day i { font-style: normal; font-size: 10px; opacity: 0.85; }
+.cal--future { background: transparent; color: var(--text-3); opacity: 0.5; }
+.cal--none { background: transparent; border: 1px dashed var(--line); }
+.cal--level1 { background: color-mix(in srgb, var(--data) 30%, var(--surface-2)); color: var(--text); }
+.cal--level2 { background: color-mix(in srgb, var(--data) 55%, var(--surface-2)); color: var(--text); }
+.cal--level3 { background: color-mix(in srgb, var(--data) 80%, var(--surface-2)); color: var(--text); }
+.cal--level4 { background: var(--data); color: #fff; box-shadow: inset 0 0 0 1.5px var(--data-hi); }
+.cal--clean { background: var(--mint); color: var(--on-mint); }
+.cal--used { background: var(--line); color: var(--text-2); }
+.cal--today { background: transparent; border: 1.5px dashed var(--mint); color: var(--mint); }
+.cal--is-today { box-shadow: inset 0 0 0 2px var(--text); }
+.is-entering .cal__day { animation: pop 0.35s cubic-bezier(0.3, 1.4, 0.5, 1) both; animation-delay: 0.15s; }
+
 /* Aide : questions dépliables */
 .faq { background: var(--surface); border-radius: 18px; }
 .faq summary { list-style: none; cursor: pointer; min-height: 56px; padding: 14px 44px 14px 18px; position: relative; font-weight: 700; font-size: 15px; display: flex; align-items: center; }
@@ -553,7 +584,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -701,7 +732,7 @@ const Store = {
         reduction: { on: false, startDate: null, weeklyStep: 1, base: null }, // cible = base − pas × semaines
         theme: 'dark',               // 'dark' | 'light'
         askContext: true,            // ouvrir la feuille contexte après « + Snus / + Vape »
-        profile: { done: false, uses: null, goals: [], concerns: [], firstUse: null }, // questionnaire de départ
+        profile: { done: false, uses: null, goals: [], concerns: [], firstUse: null, why: '' }, // questionnaire de départ
         lastExportAt: null,
         backupSnoozeUntil: null,     // « Plus tard » sur le rappel de sauvegarde
         reminder: { checkinTime: '21:00', inApp: true, snoozeDate: null } // rappel du check-in du soir
@@ -788,13 +819,14 @@ const Store = {
   },
 
   cleanProfile(p) {
-    const out = { done: false, uses: null, goals: [], concerns: [], firstUse: null };
+    const out = { done: false, uses: null, goals: [], concerns: [], firstUse: null, why: '' };
     if (!p || typeof p !== 'object') return out;
     out.done = p.done === true;
     out.uses = ['snus', 'vape', 'both'].includes(p.uses) ? p.uses : null;
     out.goals = Array.isArray(p.goals) ? [...new Set(p.goals.filter((g) => GOAL_KEYS.includes(g)))] : [];
     out.concerns = Array.isArray(p.concerns) ? [...new Set(p.concerns.filter((c) => CONCERN_BY_KEY[c]))] : [];
     out.firstUse = FIRST_USE.some(([k]) => k === p.firstUse) ? p.firstUse : null;
+    out.why = typeof p.why === 'string' ? p.why.trim().slice(0, 140) : '';
     return out;
   },
 
@@ -1013,6 +1045,40 @@ Object.assign(Calc, {
   }
 });
 
+/* ---- Calc : raisons d'arrêter (écran « J'ai une envie ») ---- */
+/**
+ * Ce qui motive, pour tenir pendant une envie : ta phrase à toi, tes progrès,
+ * tes motivations et les bénéfices liés à tes points de santé. Toujours au moins un.
+ */
+Calc.reasons = function (data, now = Date.now()) {
+  const s = data.settings, p = s.profile, out = [];
+  if (p.why) out.push({ title: 'Ta raison', text: p.why });
+  if (s.phase === 'arret' && s.quitStart) {
+    const cur = Calc.streaks(data.intakes, s.quitStart, now).current;
+    const d = Dates.splitDuration(cur);
+    out.push({ title: 'Déjà', text: `${d.d ? `${d.d} j ${d.h} h` : `${d.h} h ${d.m} min`} sans nicotine. Ne laisse pas une envie de quelques minutes effacer ça.` });
+    const av = Calc.avoided(data.intakes, s, now, data.vapeMl);
+    if (av.money) out.push({ title: 'Ton argent', text: `${Util.formatMoney(av.money)} déjà économisés depuis l’arrêt.` });
+    const tr = data.cravings.filter((c) => c.resolved && c.ts >= s.quitStart).length;
+    if (tr) out.push({ title: 'Tu sais faire', text: `${tr} envie${tr > 1 ? 's' : ''} déjà traversée${tr > 1 ? 's' : ''}. Celle-ci passera aussi.` });
+  } else {
+    const tr = data.cravings.filter((c) => c.resolved).length;
+    if (tr) out.push({ title: 'Tu sais faire', text: `${tr} envie${tr > 1 ? 's' : ''} déjà traversée${tr > 1 ? 's' : ''} sans prise.` });
+  }
+  const goalText = {
+    argent: () => { const y = Calc.yearlyCost(s, data.intakes, data.vapeMl); return y ? `Environ ${Util.formatMoney(y, 0)} par an qui resteront dans ta poche.` : 'Chaque prise évitée, c’est de l’argent qui reste dans ta poche.'; },
+    liberte: () => 'Ne plus devoir en avoir sur toi, ni prévoir la prochaine.',
+    sante: () => 'Ton cœur et tes vaisseaux ne sont plus sollicités plusieurs fois par jour.',
+    sport: () => 'Un cœur plus calme au repos et une énergie plus stable.',
+    proches: () => 'Pour celles et ceux qui comptent pour toi.'
+  };
+  const goalTitle = { argent: 'Ton argent', liberte: 'Liberté', sante: 'Santé', sport: 'Sport et énergie', proches: 'Tes proches' };
+  p.goals.forEach((g) => { if (!(g === 'argent' && out.some((r) => r.title === 'Ton argent'))) out.push({ title: goalTitle[g], text: goalText[g]() }); });
+  p.concerns.forEach((k) => { const c = CONCERN_BY_KEY[k]; if (c) out.push({ title: c.title, text: c.text.split(/(?<=\.)\s/).slice(-1)[0] }); });
+  if (!out.length) out.push({ title: 'Ça va passer', text: 'Une envie monte, culmine, puis redescend. Respire avec le cercle.' });
+  return out;
+};
+
 /* ---- Calc : rappel de sauvegarde ---- */
 /**
  * Rappel d'export : données présentes, et soit jamais exportées alors que la
@@ -1025,6 +1091,124 @@ Calc.backupDue = function (data, now = Date.now()) {
   if (!s.lastExportAt) return now - data.intakes[0].ts > 7 * DAY_MS;
   return now - s.lastExportAt > 14 * DAY_MS;
 };
+
+/* ---- Calc : constats automatiques ---- */
+const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const TRIGGER_PHRASE = { ennui: 'l’ennui', stress: 'le stress', cafe: 'le café', repas: 'l’après-repas', soiree: 'la soirée', reveil: 'le réveil' };
+
+Object.assign(Calc, {
+  /** Créneau de `width` heures le plus chargé (sans passer minuit). */
+  peakWindow(list, width = 3) {
+    if (!list.length) return null;
+    const hist = Calc.hourHistogram(list);
+    let best = null;
+    for (let h = 0; h + width <= 24; h++) {
+      const n = hist.slice(h, h + width).reduce((a, b) => a + b, 0);
+      if (!best || n > best.n) best = { from: h, to: h + width, n };
+    }
+    return { ...best, share: best.n / list.length };
+  },
+
+  /** Déclencheur noté le plus fréquent, et sa part sur l'ensemble. */
+  topTrigger(list) {
+    const rows = Calc.triggerShare(list).filter((r) => r.key !== 'none');
+    return rows.length ? { key: rows[0].key, share: rows[0].count / list.length } : null;
+  },
+
+  /** Jour de la semaine le plus chargé (moyenne par occurrence de ce jour). */
+  busiestWeekday(intakes, fromKey, toKey) {
+    const days = Calc.dailyCounts(intakes, fromKey, toKey);
+    const sums = new Array(7).fill(0), seen = new Array(7).fill(0);
+    days.forEach((d) => { const w = (new Date(Dates.keyToStart(d.key)).getDay() + 6) % 7; sums[w] += d.total; seen[w] += 1; });
+    const overall = days.reduce((a, d) => a + d.total, 0) / days.length;
+    let best = null;
+    sums.forEach((s, w) => { if (seen[w] >= 2) { const avg = s / seen[w]; if (!best || avg > best.avg) best = { dow: w, avg }; } });
+    return best && overall > 0 ? { ...best, overall, ratio: best.avg / overall } : null;
+  },
+
+  /**
+   * Constats en phrases simples, seulement quand les données suffisent.
+   * Observation : heures, déclencheur, jour de la semaine, tendance.
+   * Arrêt : heures et déclencheur des envies, baisse des envies, envies traversées.
+   * Au plus 3, jamais culpabilisants.
+   */
+  insights(data, todayKey = Dates.todayKey()) {
+    const s = data.settings, out = [];
+    const pct = (x) => Math.round(x * 100);
+    if (s.phase === 'arret') {
+      const cr = data.cravings.filter((c) => c.ts >= s.quitStart);
+      if (cr.length < 5) return out;
+      const peak = Calc.peakWindow(cr);
+      if (peak.share >= 0.3) out.push(`Tes envies arrivent surtout entre ${peak.from} h et ${peak.to} h : c’est le moment à préparer.`);
+      const top = Calc.topTrigger(cr);
+      if (top && top.share >= 0.2) out.push(`Déclencheur le plus fréquent de tes envies : ${TRIGGER_PHRASE[top.key]}.`);
+      const startKey = Dates.dayKey(s.quitStart);
+      const span = Dates.diffDays(startKey, todayKey);
+      if (span >= 6) {
+        const per = (from, to) => cr.filter((c) => { const k = Dates.dayKey(c.ts); return k >= from && k <= to; }).length / 3;
+        const first = per(startKey, Dates.addDays(startKey, 2));
+        const last = per(Dates.addDays(todayKey, -3), Dates.addDays(todayKey, -1));
+        if (first > 0 && last < first * 0.8) out.push(`Tes envies ont baissé de ${pct(1 - last / first)} % depuis les premiers jours.`);
+      }
+      const traversed = cr.filter((c) => c.resolved).length;
+      if (out.length < 3 && traversed) out.push(`${traversed} envie${traversed > 1 ? 's' : ''} sur ${cr.length} traversée${traversed > 1 ? 's' : ''} sans prise.`);
+      return out.slice(0, 3);
+    }
+    if (!data.intakes.length) return out;
+    const first = Dates.dayKey(data.intakes[0].ts);
+    let from = Dates.addDays(todayKey, -28);
+    if (from < first) from = first;
+    const to = Dates.addDays(todayKey, -1);
+    const span = Dates.diffDays(from, to) + 1;
+    const list = Calc.between(data.intakes, from, to);
+    if (span < 5 || list.length < 15) return out;
+    const peak = Calc.peakWindow(list);
+    if (peak.share >= 0.25) out.push(`${pct(peak.share)} % de tes prises tombent entre ${peak.from} h et ${peak.to} h.`);
+    const top = Calc.topTrigger(list);
+    if (top && top.share >= 0.15) out.push(`Déclencheur le plus fréquent : ${TRIGGER_PHRASE[top.key]}, environ 1 prise sur ${Math.max(2, Math.round(1 / top.share))}.`);
+    if (span >= 14) {
+      const wd = Calc.busiestWeekday(data.intakes, from, to);
+      if (wd && wd.ratio >= 1.2) out.push(`Le ${WEEKDAYS[wd.dow]} est ton jour le plus chargé : ${Util.formatNum(wd.avg, 1)} prises en moyenne, contre ${Util.formatNum(wd.overall, 1)}.`);
+      const avg = (a, b) => Calc.between(data.intakes, a, b).length / 7;
+      const last = avg(Dates.addDays(todayKey, -7), to), prev = avg(Dates.addDays(todayKey, -14), Dates.addDays(todayKey, -8));
+      if (prev > 0 && Math.abs(last - prev) / prev >= 0.1) {
+        out.push(last < prev
+          ? `En baisse : ${pct(1 - last / prev)} % de prises en moins que la semaine d’avant.`
+          : `${pct(last / prev - 1)} % de prises en plus que la semaine d’avant. Un simple repère, rien de plus.`);
+      }
+    }
+    return out.slice(0, 3);
+  },
+
+  /** Cases du calendrier d'un mois (« AAAA-MM »), lundi en premier. */
+  monthCells(data, month, todayKey = Dates.todayKey()) {
+    const [y, m] = month.split('-').map(Number);
+    const firstKey = `${month}-01`;
+    const nDays = new Date(y, m, 0).getDate();
+    const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    const counts = {};
+    data.intakes.forEach((x) => { const k = Dates.dayKey(x.ts); if (k.startsWith(month)) counts[k] = (counts[k] || 0) + 1; });
+    const s = data.settings;
+    const quitKey = s.phase === 'arret' ? Dates.dayKey(s.quitStart) : null;
+    const vals = Object.values(counts);
+    const max = Math.max(1, ...vals), min = vals.length ? Math.min(...vals) : 0;
+    // 4 niveaux répartis entre le jour le plus léger et le plus chargé du mois.
+    const level = (n) => (n === 0 ? 0 : max === min ? 2 : 1 + Math.round(((n - min) / (max - min)) * 3));
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push(null);
+    for (let d = 1; d <= nDays; d++) {
+      const key = Dates.addDays(firstKey, d - 1);
+      const n = counts[key] || 0;
+      let state;
+      if (key > todayKey) state = 'future';
+      else if (quitKey && key >= quitKey) state = n ? 'used' : (key === todayKey ? 'today' : 'clean');
+      else if (!data.intakes.length || key < Dates.dayKey(data.intakes[0].ts)) state = 'none';
+      else state = 'level' + level(n);
+      cells.push({ key, day: d, n, state, today: key === todayKey });
+    }
+    return cells;
+  }
+});
 
 /* ---- Calc : statistiques ---- */
 Object.assign(Calc, {
@@ -1680,6 +1864,13 @@ Calc.newMilestone = function (currentMs, list, seenH) {
   return last;
 };
 
+/** Mois « AAAA-MM » décalé de n mois. */
+Calc.shiftMonth = function (month, n) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${Dates.pad(d.getMonth() + 1)}`;
+};
+
 /** Dernier repère atteint pour un enchaînement donné (ou null). */
 Calc.lastPassed = function (currentMs, list) {
   const h = currentMs / 3600000;
@@ -1911,6 +2102,12 @@ const Anim = {
     setTimeout(() => f.remove(), 900);
   },
 
+  /** Changement doux du contenu d'une carte. */
+  swap(el) {
+    if (Anim.reduced()) return;
+    el.classList.remove('reason--in'); void el.offsetWidth; el.classList.add('reason--in');
+  },
+
   /** Onglet qui rebondit quand on y arrive. */
   tabPop(name) {
     if (Anim.reduced()) return;
@@ -2123,7 +2320,7 @@ const Screens = {
       <header class="header"><h1 class="title">Historique</h1>
         <a class="icon-btn" href="#/${App.historyBack || 'reglages'}" aria-label="Retour">${Icon.close}</a></header>
       <p class="small muted">Touche une prise pour corriger son heure, son type ou son contexte, ou pour la supprimer.</p>
-      ${shown.length ? shown.map((k) => `<section class="stack" style="gap:0">
+      ${shown.length ? shown.map((k) => `<section class="stack" style="gap:0" id="jour-${k}">
           <div class="row" style="padding:8px 0"><span class="label">${Util.esc(Dates.formatDayLong(Dates.keyToStart(k)))}</span>
             <span class="small faint">${byDay[k].length}</span></div>
           ${byDay[k].slice().reverse().map(Screens.intakeRow).join('')}
@@ -2164,6 +2361,7 @@ const Screens = {
         <p>Dans les Réglages, indique le prix, la contenance (ml) et le taux de nicotine (mg/ml) de ta capsule ou de ton flacon.</p>`)}
       ${q('J’ai une envie', `
         <p>Le bouton en bas lance un minuteur de dix minutes avec une respiration guidée : quatre secondes pour inspirer, six pour expirer. Une envie monte, culmine et redescend, souvent en quelques minutes.</p>
+        <p>Pendant le minuteur, une carte te rappelle tes raisons : ta phrase à toi (Réglages → Profil), tes progrès et les bénéfices qui te concernent.</p>
         <p>À la fin, un mini-relevé (déclencheur, intensité) aide à repérer tes moments. Si tu as fini par prendre, ce n'est pas grave : note-le, et on repart.</p>`)}
       ${q('Après une prise en mode arrêt', `
         <p>Rien n'est remis à zéro. Le compteur repart de ta dernière prise, mais ton total de jours sans nicotine et ton meilleur enchaînement restent. La plupart des gens arrêtent après plusieurs essais.</p>`)}
@@ -2367,11 +2565,24 @@ const Screens = {
         <span class="num" style="font-size:48px;font-weight:500" data-live="craving-left">${v.left}</span>
         <span class="small faint">restantes</span>
       </div>
+      ${Screens.reasonCard(el)}
       <div class="grid-2" style="align-self:stretch;margin-top:auto">
         <button type="button" class="btn" data-action="craving-pause">${c.pausedAt ? 'Reprendre' : 'Pause'}</button>
         <button type="button" class="btn btn--primary" data-action="craving-done">C'est passé</button>
       </div>
     </div>`;
+  },
+
+  /** Carte « tes raisons » : change toutes les 10 s, au rythme d'une respiration. */
+  reasonCard(el) {
+    const list = Calc.reasons(Store.data);
+    const idx = Math.floor(el / 10000) % list.length;
+    const r = list[idx];
+    return `<section class="reason" aria-live="polite" data-idx="${idx}">
+      <span class="label" style="color:var(--mint)" data-live="reason-title">${Util.esc(r.title)}</span>
+      <p data-live="reason-text">${Util.esc(r.text)}</p>
+      ${list.length > 1 ? `<span class="reason__dots" aria-hidden="true">${list.map((_, i) => `<i class="${i === Math.floor(el / 10000) % list.length ? 'on' : ''}"></i>`).join('')}</span>` : ''}
+    </section>`;
   },
 
   envieLog(c) {
@@ -2387,7 +2598,8 @@ const Screens = {
       </section>
       ${IntakeSheet.triggersHtml(c.trigger).replace(/sheet-trigger/g, 'craving-trigger')}
       ${IntakeSheet.intensityHtml(c.intensity).replace(/sheet-intensity/g, 'craving-intensity').replace('Intensité de l\'envie', 'Intensité au plus fort')}
-      <section class="card card--outline"><p style="font-size:16px;line-height:1.5">Chaque envie traversée sans céder affaiblit un peu l'automatisme. Celle-ci compte.</p></section>
+      <section class="card card--outline"><p style="font-size:16px;line-height:1.5">Chaque envie traversée sans céder affaiblit un peu l'automatisme. Celle-ci compte.</p>
+        ${Store.data.settings.profile.why ? `<p class="small muted">Et souviens-toi : ${Util.esc(Store.data.settings.profile.why)}</p>` : ''}</section>
       <div class="stack" style="gap:6px">
         <button type="button" class="btn btn--primary btn--block" data-action="craving-save">Enregistrer</button>
         <div class="row" style="justify-content:center;gap:16px">
@@ -2459,6 +2671,48 @@ const Screens = {
     return Store.data.settings.phase === 'arret' ? Screens.statsQuit() : Screens.statsObservation();
   },
 
+  /** Constats automatiques (3 au plus). */
+  insightsCard() {
+    const list = Calc.insights(Store.data);
+    if (!list.length) return '';
+    return `<section class="card card--featured insights" style="gap:10px">
+      <span class="row"><span class="label" style="color:var(--mint)">Constats</span><span class="tiny faint">${Store.data.settings.phase === 'arret' ? 'depuis l’arrêt' : '4 dernières semaines'}</span></span>
+      ${list.map((t) => `<p class="insight">${Util.esc(t)}</p>`).join('')}
+    </section>`;
+  },
+
+  /** Calendrier du mois : un coup d'œil sur chaque jour ; toucher un jour l'ouvre. */
+  calendarCard() {
+    const today = Dates.todayKey();
+    const month = App.calMonth || today.slice(0, 7);
+    const cells = Calc.monthCells(Store.data, month, today);
+    const [y, m] = month.split('-').map(Number);
+    const title = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const isCurrent = month === today.slice(0, 7);
+    const arret = Store.data.settings.phase === 'arret';
+    const label = (c) => {
+      const date = Dates.formatDayLong(Dates.keyToStart(c.key));
+      if (c.state === 'future') return date;
+      if (c.state === 'clean') return `${date} : sans nicotine`;
+      if (c.state === 'today') return `${date} : en cours, sans nicotine`;
+      return `${date} : ${c.n} prise${c.n > 1 ? 's' : ''}`;
+    };
+    return `<section class="card" style="gap:12px">
+      <div class="row">
+        <button type="button" class="icon-btn icon-btn--ghost" data-action="cal-prev" aria-label="Mois précédent">${Icon.prev}</button>
+        <span style="font-weight:700;text-transform:capitalize">${Util.esc(title)}</span>
+        <button type="button" class="icon-btn icon-btn--ghost" data-action="cal-next" aria-label="Mois suivant" ${isCurrent ? 'disabled' : ''}>${Icon.next}</button>
+      </div>
+      <div class="cal" role="grid">
+        ${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d) => `<span class="cal__head" aria-hidden="true">${d}</span>`).join('')}
+        ${cells.map((c) => c === null ? '<span></span>' : `<button type="button" class="cal__day cal--${c.state}${c.today ? ' cal--is-today' : ''}"
+          ${c.state === 'future' ? 'disabled' : `data-action="cal-open" data-value="${c.key}"`} aria-label="${Util.esc(label(c))}">
+          <span>${c.day}</span>${!arret && c.n ? `<i>${c.n}</i>` : ''}</button>`).join('')}
+      </div>
+      <p class="tiny faint">${arret ? 'Menthe : jour sans nicotine. Gris : jour avec une prise. Plus clair : avant l’arrêt.' : 'Plus la case est colorée, plus il y a eu de prises. Touche un jour pour le voir.'}</p>
+    </section>`;
+  },
+
   /** Stats — phase observation. */
   statsObservation() {
     const intakes = Store.data.intakes;
@@ -2477,9 +2731,11 @@ const Screens = {
           <button type="button" data-action="stats-range" data-value="30" aria-pressed="${n === 30}">30 j</button>
         </div>
       </header>
+      ${Screens.insightsCard()}
       ${Screens.statsReduction(intakes, today)}
       ${daysKnown < 3 ? `<p class="small muted">Encore ${3 - daysKnown} jour${3 - daysKnown > 1 ? 's' : ''} de relevés pour des moyennes parlantes.</p>` : ''}
       ${Screens.statsDaily(intakes, from, today, n, avg)}
+      ${Screens.calendarCard()}
       ${Screens.statsHours(inRange)}
       ${Screens.statsTriggers(inRange)}
       ${Screens.correlationCard()}
@@ -2510,11 +2766,7 @@ const Screens = {
     const st = Store.data.settings, now = Date.now(), today = Dates.todayKey();
     const startKey = Dates.dayKey(st.quitStart);
     const allKeys = Dates.range(startKey, today);
-    const keys = allKeys.slice(-28);
-    const used = {};
-    Calc.quitIntakes(Store.data.intakes, st.quitStart).forEach((x) => { const k = Dates.dayKey(x.ts); used[k] = (used[k] || 0) + 1; });
     const clean = Calc.cleanDays(Store.data.intakes, st.quitStart, now);
-    const dayItems = keys.map((k) => ({ label: String(Number(k.slice(8))), state: used[k] ? 'used' : k === today ? 'today' : 'clean' }));
     const cravings = Store.data.cravings.filter((c) => c.ts >= st.quitStart);
     const cKeys = allKeys.slice(-14);
     const perDay = cKeys.map((k) => ({ v: cravings.filter((c) => Dates.dayKey(c.ts) === k).length, label: k === today ? 'Auj.' : String(Number(k.slice(8))), hi: k === today }));
@@ -2527,12 +2779,13 @@ const Screens = {
     return `<div class="screen">
       <header class="header"><h1 class="title">Stats</h1><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
 
-      <section class="card" style="gap:14px">
-        <div class="stack" style="gap:4px"><span class="small muted">Jours sans nicotine</span>
-          <span class="value">${clean} <span class="small muted" style="font-family:var(--font-text);font-weight:500">jour${clean > 1 ? 's' : ''} complet${clean > 1 ? 's' : ''} sur ${Math.max(0, dayN - 1)}</span></span></div>
-        ${Charts.days(dayItems, 'Jours depuis l’arrêt : sans nicotine ou avec prise')}
-        <p class="tiny faint">Menthe : jour sans nicotine. Gris : jour avec une prise. Le total ne repart jamais à zéro.</p>
+      ${Screens.insightsCard()}
+
+      <section class="stack" style="gap:4px;padding:0 4px">
+        <span class="small muted">Jours sans nicotine</span>
+        <span class="value">${clean} <span class="small muted" style="font-family:var(--font-text);font-weight:500">jour${clean > 1 ? 's' : ''} complet${clean > 1 ? 's' : ''} sur ${Math.max(0, dayN - 1)} · le total ne repart jamais à zéro</span></span>
       </section>
+      ${Screens.calendarCard()}
 
       <section class="card" style="gap:14px">
         <div class="row" style="align-items:flex-end">
@@ -2715,7 +2968,9 @@ const Screens = {
 
   quiz_goals(a) {
     return Screens.quizQuestion('Qu’est-ce qui compte le plus pour toi ?', 'Choisis tout ce qui te parle.',
-      GOALS.map((g) => Screens.option('goals', g.key, g.label, a.goals.includes(g.key))).join(''));
+      GOALS.map((g) => Screens.option('goals', g.key, g.label, a.goals.includes(g.key))).join('') + `
+      <label class="stack" style="gap:8px;margin-top:8px"><span class="small muted">En une phrase, ta raison à toi (facultatif)</span>
+        <span class="field__box" style="width:100%;height:auto;min-height:52px"><input type="text" data-quiz="why" maxlength="140" value="${Util.esc(a.why || '')}" placeholder="Pour ma fille, pour respirer, pour être libre…" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>`);
   },
 
   quiz_concerns(a) {
@@ -3006,7 +3261,10 @@ const Screens = {
         <div class="group"><div class="field">
           <span class="field__label"><span>Questionnaire</span><span class="tiny faint">${Screens.profileSummary(s.profile)}</span></span>
           <a class="link link--mint" href="#/bienvenue" data-action="quiz-start">${s.profile.done ? 'Refaire' : 'Répondre'}</a>
-        </div></div>
+        </div>
+        <label class="stack" style="gap:6px;padding:12px 0"><span class="field__label"><span>Ta raison d’arrêter</span><span class="tiny faint">Elle s’affiche quand tu as une envie</span></span>
+          <span class="field__box" style="width:100%"><input type="text" data-profile="why" maxlength="140" value="${Util.esc(s.profile.why)}" placeholder="En une phrase (facultatif)" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>
+        </div>
       </section>
 
       <section class="stack">
@@ -3257,7 +3515,7 @@ const Quiz = {
   MULTI: ['goals', 'concerns'],
 
   fromProfile(p, step) {
-    return { step, a: { uses: p.uses, goals: [...p.goals], concerns: [...p.concerns], firstUse: p.firstUse } };
+    return { step, a: { uses: p.uses, goals: [...p.goals], concerns: [...p.concerns], firstUse: p.firstUse, why: p.why || '' } };
   },
 
   pick(q, value) {
@@ -3444,6 +3702,25 @@ const Actions = {
     const next = Math.round(((cur || 0) + delta) * 10) / 10;
     Vape.setMl(input.dataset.ml, Math.min(Vape.MAX_ML, Math.max(0, next)));
   },
+  'cal-prev'() { const m = App.calMonth || Dates.todayKey().slice(0, 7); App.calMonth = Calc.shiftMonth(m, -1); App.render(); },
+  'cal-next'() { const m = App.calMonth || Dates.todayKey().slice(0, 7); const n = Calc.shiftMonth(m, 1); App.calMonth = n > Dates.todayKey().slice(0, 7) ? null : n; App.render(); },
+  'cal-open'(el) {
+    const key = el.dataset.value;
+    if (Store.data.settings.phase === 'arret') {
+      // En arrêt, Aujourd'hui n'a pas de vue par jour : l'historique s'ouvre sur ce jour.
+      App.afterRoute = () => {
+        const days = Store.data.intakes.length ? Dates.diffDays(key, Dates.todayKey()) + 1 : 30;
+        if (days > App.historyDays) { App.historyDays = days; App.render(); }
+        const el = document.getElementById(`jour-${key}`);
+        if (el) el.scrollIntoView({ block: 'start' });
+        else UI.toast('Aucune prise ce jour-là.');
+      };
+      App.go('#/historique');
+    } else {
+      App.afterRoute = () => { App.viewDay = key === Dates.todayKey() ? null : key; App.render(); };
+      App.go('#/aujourdhui');
+    }
+  },
   'checkin-snooze'() { Store.update((d) => { d.settings.reminder.snoozeDate = Calc.checkinDayFor(Date.now()); }); },
   'reminder-inapp'() { Store.update((d) => { d.settings.reminder.inApp = !d.settings.reminder.inApp; }); },
   'reminder-calendar'() { Reminders.addToCalendar(); },
@@ -3475,6 +3752,8 @@ const Actions = {
     if (location.hash === '#/bienvenue') App.render(); else App.go('#/bienvenue');
   },
   'quiz-next'() {
+    const why = document.querySelector('[data-quiz="why"]');
+    if (why) App.quiz.a.why = why.value.trim().slice(0, 140);
     App.quiz.step = Math.min(Quiz.STEPS.length - 1, App.quiz.step + 1);
     App.render();
     document.getElementById('view').scrollTop = 0;
@@ -3855,6 +4134,8 @@ const App = {
   lastPick: null,
   /** Check-in en cours de saisie (non enregistré). */
   checkinDraft: null,
+  /** Mois affiché dans le calendrier (null = mois en cours). */
+  calMonth: null,
   /** Période des stats : 7 ou 30 jours. */
   statsRange: 7,
   /** Jour affiché sur « Aujourd'hui » (null = aujourd'hui). */
@@ -3896,6 +4177,15 @@ const App = {
       const c = Craving.current, el = Craving.elapsed(c), v = Craving.view(el, c);
       if (el >= Craving.DURATION) { Craving.finish(); App.celebrate = true; App.render(); return; }
       set('craving-phase', v.phase); set('craving-hint', v.hint); set('craving-left', v.left);
+      const list = Calc.reasons(Store.data);
+      const idx = Math.floor(el / 10000) % list.length;
+      const card = document.querySelector('.reason');
+      if (card && card.dataset.idx !== String(idx)) {
+        if (card.dataset.idx !== undefined) Anim.swap(card);
+        card.dataset.idx = String(idx);
+        set('reason-title', list[idx].title); set('reason-text', list[idx].text);
+        card.querySelectorAll('.reason__dots i').forEach((d, i) => d.classList.toggle('on', i === idx));
+      }
       const ring = document.querySelector('[data-live="craving-ring"]');
       if (ring) ring.setAttribute('stroke-dashoffset', v.dash);
     }
@@ -4016,6 +4306,8 @@ const App = {
       return;
     }
     if (input.dataset.ml) { Vape.setMl(input.dataset.ml, Vape.parse(input.value)); return; }
+    if (input.dataset.quiz === 'why' && App.quiz) { App.quiz.a.why = input.value.trim().slice(0, 140); return; }
+    if (input.dataset.profile === 'why') { Store.update((d) => { d.settings.profile.why = input.value.trim().slice(0, 140); }); return; }
     if (input.dataset.reminder === 'checkinTime') {
       if (Reminders.validTime(input.value)) Store.update((d) => { d.settings.reminder.checkinTime = input.value; });
       else App.render();
@@ -4482,7 +4774,7 @@ Tests.add('jalons : formulés comme des tendances, sans promesse', () => {
 /* ---- Questionnaire et bénéfices personnalisés ---- */
 Tests.add('profil : nettoyage des réponses', () => {
   const p = Store.cleanProfile({ done: true, uses: 'both', goals: ['argent', 'argent', 'inconnu'], concerns: ['tension', 'rien'], firstUse: 'lt5' });
-  Tests.eq(p, { done: true, uses: 'both', goals: ['argent'], concerns: ['tension'], firstUse: 'lt5' });
+  Tests.eq(p, { done: true, uses: 'both', goals: ['argent'], concerns: ['tension'], firstUse: 'lt5', why: '' });
   Tests.eq(Store.cleanProfile(null).done, false);
   Tests.eq(Store.normalize({}).settings.profile.concerns, []);
 });
@@ -4737,6 +5029,60 @@ Tests.add('repères : données d’avant la 2.0, rien de célébré après coup'
   Tests.eq(Store.normalize({ settings: {} }).settings.seenMilestoneH, null);
   Tests.eq(Calc.lastPassed(40 * DAY_MS, MILESTONES).title, '1 mois');
   Tests.eq(Calc.lastPassed(0, MILESTONES), null);
+});
+
+/* ---- Raisons, constats, calendrier ---- */
+Tests.add('raisons : ta phrase en premier, progrès et bénéfices, jamais vide', () => {
+  const d = Demo.generateQuit(Date.now(), 6);
+  d.settings.profile.why = 'Pour respirer';
+  const r = Calc.reasons(d);
+  Tests.eq(r[0], { title: 'Ta raison', text: 'Pour respirer' });
+  Tests.eq(r.some((x) => x.title === 'Déjà'), true);
+  Tests.eq(r.filter((x) => x.title === 'Ton argent').length, 1);
+  Tests.eq(Calc.reasons(Store.defaults()).length, 1);
+  Tests.eq(Store.cleanProfile({ why: '  x'.padEnd(300, 'y') }).why.length, 140);
+});
+Tests.add('constats : rien sans assez de données ; heures, déclencheur, tendance', () => {
+  Tests.eq(Calc.insights(Store.defaults()), []);
+  const today = '2026-10-29';
+  const d = Store.defaults();
+  for (let day = 1; day <= 28; day++) {
+    const key = `2026-10-${String(day).padStart(2, '0')}`;
+    const n = day > 21 ? 4 : 8; // dernière semaine en baisse
+    for (let i = 0; i < n; i++) d.intakes.push({ type: 'snus', ts: Dates.keyToStart(key) + (16 * 60 + i * 10) * 60000, trigger: i % 2 ? 'cafe' : null });
+  }
+  const out = Calc.insights(d, today);
+  Tests.eq(out.length, 3);
+  Tests.eq(/^100 % de tes prises tombent entre 1[56] h et 1[89] h\.$/.test(out[0]), true, out[0]);
+  Tests.eq(out[1].includes('le café'), true, out[1]);
+  Tests.eq(out.some((t) => t.startsWith('En baisse')), true, out.join(' | '));
+  const all = out.join(' ').toLowerCase();
+  ['échec', 'trop', 'mauvais'].forEach((w) => Tests.eq(all.includes(w), false, w));
+});
+Tests.add('constats en arrêt : baisse des envies depuis les premiers jours', () => {
+  const now = new Date(2026, 9, 20, 20).getTime();
+  const d = Store.defaults();
+  Object.assign(d.settings, { phase: 'arret', quitStart: new Date(2026, 9, 10, 8).getTime() });
+  [6, 6, 6, 4, 3, 3, 2, 2, 1, 1].forEach((n, i) => { for (let k = 0; k < n; k++) d.cravings.push({ ts: d.settings.quitStart + i * DAY_MS + (2 + k) * 3600000, trigger: 'stress', resolved: true }); });
+  const out = Calc.insights(d, '2026-10-20');
+  Tests.eq(out.some((t) => t.includes('ont baissé')), true, out.join(' | '));
+});
+Tests.add('calendrier : décalage du lundi, niveaux, jours sans nicotine', () => {
+  const d = Store.defaults();
+  const t = (day, h) => new Date(2026, 9, day, h).getTime();
+  d.intakes = [{ type: 'snus', ts: t(1, 9) }, { type: 'snus', ts: t(2, 9) }, { type: 'snus', ts: t(2, 10) }, { type: 'vape', ts: t(2, 11) }, { type: 'vape', ts: t(2, 12) }];
+  const cells = Calc.monthCells(d, '2026-10', '2026-10-05');
+  Tests.eq(cells.filter((c) => c === null).length, 3); // le 1er octobre 2026 est un jeudi
+  Tests.eq(cells.length, 3 + 31);
+  Tests.eq(cells[3].state, 'level1'); // 1 prise = le minimum du mois
+  Tests.eq(cells[4].state, 'level4'); // 4 prises = le maximum
+  Tests.eq(cells[5].state, 'level0'); // aucune prise
+  Tests.eq(cells[3 + 9].state, 'future');
+  Object.assign(d.settings, { phase: 'arret', quitStart: t(3, 8) });
+  const q = Calc.monthCells(d, '2026-10', '2026-10-05');
+  Tests.eq([q[5].state, q[7].state].join(), 'clean,today');
+  Tests.eq(Calc.shiftMonth('2026-01', -1), '2025-12');
+  Tests.eq(Calc.shiftMonth('2026-12', 1), '2027-01');
 });
 
 App.boot();

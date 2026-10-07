@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.0 (version finale)**
+**Version 2.1**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -16,10 +16,10 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 
 - **Questionnaire de départ** (facultatif) : usage, motivations, points de santé → bénéfices adaptés.
 - **Observation** : « + Snus » / « + Vape » en un tap, contexte facultatif (déclencheur, intensité), millilitres de vape du jour, correction après coup (Historique), réduction progressive optionnelle.
-- **Stats** : prises par jour, moyenne 7 j, heures, déclencheurs, dépenses en CHF, nicotine estimée (snus : portions × mg ; vape : ml × mg/ml), corrélation avec le check-in.
+- **Stats** : constats automatiques (heures, déclencheur, jour chargé, tendance), calendrier du mois, prises par jour, moyenne 7 j, heures, déclencheurs, dépenses en CHF, nicotine estimée (snus : portions × mg ; vape : ml × mg/ml), corrélation avec le check-in.
 - **Check-in du soir** : sommeil, énergie, humeur, anxiété, fréquence cardiaque au repos.
 - **Arrêt** : temps sans nicotine en direct, économies (CHF), doses et ml évités, nicotine évitée, par rapport à la moyenne réelle d'observation ; meilleur enchaînement, message du jour.
-- **J'ai une envie** : minuteur de 10 minutes, respiration guidée, mini-relevé.
+- **J'ai une envie** : minuteur de 10 minutes, respiration guidée, rappel de tes raisons d'arrêter (ta phrase, tes progrès, tes bénéfices), mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
 - **Corps** : frise de repères prudents (tendances générales, pas un avis médical) et bénéfices personnalisés.
 - **Rappels** : carte « Check-in du soir » dans l'app après l'heure choisie, et alerte quotidienne via le calendrier de l'iPhone (fichier .ics), iOS ne permettant pas les notifications programmées sans serveur.
