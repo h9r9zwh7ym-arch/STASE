@@ -20,6 +20,9 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 - **J'ai une envie** : minuteur de 10 minutes, respiration guidée, mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
 - **Corps** : frise de repères prudents (tendances générales, pas un avis médical) et bénéfices personnalisés.
+- **Rappels** : carte « Check-in du soir » dans l'app après l'heure choisie, et alerte quotidienne via le calendrier de l'iPhone (fichier .ics), iOS ne permettant pas les notifications programmées sans serveur.
+- **Aide** intégrée (Réglages → Aide) : fonctionnement, calculs, sauvegarde, ressources (Ligne stop-tabac 0848 000 181).
+- **Mises à jour** : recherchées à l'ouverture, « Recharger » quand une nouvelle version est prête.
 
 ## Données et sauvegarde
 
