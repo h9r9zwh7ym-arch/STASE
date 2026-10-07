@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<!-- iPhone : pleine largeur, contenu sous l'encoche (géré par les safe areas). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<!-- Ajout à l'écran d'accueil : ouverture en plein écran, sans barre Safari. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STASE">
+<meta name="application-name" content="STASE">
+<meta name="theme-color" content="#0B1220">
+<meta name="color-scheme" content="dark light">
+<title>STASE</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Cdefs%3E%3ClinearGradient id='w' x1='200' y1='0' x2='640' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23F2B36B'/%3E%3Cstop offset='1' stop-color='%235EE6C4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1024' height='1024' rx='228' fill='%23111A2E'/%3E%3Cpath d='M200 512 Q252 192 304 512 Q356 752 408 512 Q460 392 512 512 Q564 572 616 512 L800 512' fill='none' stroke='url(%23w)' stroke-width='64' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='824' cy='512' r='40' fill='%235EE6C4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+
+<style>
+/* =========================================================================
+   1. Jetons de design (maquettes STASE) — sombre par défaut, clair en option
+   ========================================================================= */
+:root {
+  --bg: #0B1220;
+  --surface: #131C2F;
+  --surface-2: #1B263D;
+  --line: #26324B;
+  --line-2: #3A4766;
+  --text: #EAF0F8;
+  --text-2: #A7B3C8;
+  --text-3: #8693AD;
+  --mint: #5EE6C4;
+  --on-mint: #062A22;
+  --mint-dim: rgba(94, 230, 196, 0.12);
+  --mint-line: rgba(94, 230, 196, 0.35);
+  --warm: #F2B36B;
+  --on-warm: #2A1704;
+  --warm-soft: rgba(242, 179, 107, 0.55);
+  --data: #5B6F99;
+  --data-hi: #C9D3E3;
+  --scrim: rgba(4, 8, 16, 0.62);
+  --sheet: #151F34;
+  --bar: rgba(13, 20, 35, 0.94);
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+  --font-num: 'Space Grotesk', ui-rounded, -apple-system, system-ui, sans-serif;
+  --font-text: 'Manrope', -apple-system, system-ui, sans-serif;
+
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --gutter: 24px;
+  --tabbar-h: 62px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+:root[data-theme="light"] {
+  --bg: #F3F5F9;
+  --surface: #FFFFFF;
+  --surface-2: #E8ECF3;
+  --line: #D6DCE7;
+  --line-2: #B9C2D3;
+  --text: #0D1525;
+  --text-2: #46526B;
+  --text-3: #5D6981;
+  --mint: #0E7F69;
+  --on-mint: #FFFFFF;
+  --mint-dim: rgba(14, 127, 105, 0.10);
+  --mint-line: rgba(14, 127, 105, 0.35);
+  --warm: #A3560F;
+  --on-warm: #FFFFFF;
+  --warm-soft: rgba(163, 86, 15, 0.45);
+  --data: #7A879F;
+  --data-hi: #2B3550;
+  --scrim: rgba(13, 21, 37, 0.36);
+  --sheet: #FFFFFF;
+  --bar: rgba(255, 255, 255, 0.94);
+  --shadow: 0 10px 24px rgba(13, 21, 37, 0.12);
+}
+
+/* =========================================================================
+   2. Base
+   ========================================================================= */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); }
+body {
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+/* Pas de zoom au double tap ; les champs restent ≥ 16 px pour éviter le zoom au focus d'iOS. */
+button, a, input, label, select { touch-action: manipulation; }
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+h1, h2, h3, p { margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* =========================================================================
+   3. Coquille de l'app : vue défilante, barre d'onglets, bouton flottant
+   ========================================================================= */
+#view {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + var(--safe-bottom) + 96px);
+}
+body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
+.screen { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 4px 4px var(--safe-bottom);
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+.tab {
+  min-height: var(--tabbar-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--text-3); text-decoration: none; font-size: 11px; font-weight: 600;
+}
+.tab svg { width: 24px; height: 24px; }
+.tab[aria-current="page"] { color: var(--mint); }
+body.no-chrome .tabbar, body.no-chrome .fab { display: none; }
+
+.fab {
+  position: fixed; left: 50%; z-index: 21;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 18px);
+  transform: translateX(-50%);
+  height: 52px; padding: 0 22px; border-radius: 26px;
+  display: flex; align-items: center; gap: 10px; white-space: nowrap;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--warm); box-shadow: var(--shadow);
+  text-decoration: none; font-size: 15px; font-weight: 600;
+}
+.fab svg { width: 20px; height: 20px; color: var(--warm); }
+
+/* =========================================================================
+   4. Typographie et éléments de texte
+   ========================================================================= */
+.wordmark { font-family: var(--font-num); font-size: 15px; font-weight: 600; letter-spacing: 0.42em; }
+.label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+.title { font-family: var(--font-num); font-size: 30px; font-weight: 600; line-height: 1.15; }
+.title--soft { font-weight: 500; font-size: 32px; }
+.big-number { font-family: var(--font-num); font-size: 120px; font-weight: 500; line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.value { font-family: var(--font-num); font-size: 30px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.value--mint { color: var(--mint); }
+.muted { color: var(--text-2); }
+.faint { color: var(--text-3); }
+.small { font-size: 13px; }
+.tiny { font-size: 12px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.header { display: flex; justify-content: space-between; align-items: center; min-height: 32px; }
+.pill {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+}
+.pill--mint { color: var(--mint); background: var(--mint-dim); border-color: transparent; }
+
+/* =========================================================================
+   5. Composants
+   ========================================================================= */
+.card { background: var(--surface); border-radius: var(--r-lg); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.card--outline { background: transparent; border: 1px solid var(--line); }
+.card--empty { background: transparent; border: 1px dashed var(--line); padding: 24px; }
+.card--featured { border: 1px solid var(--mint-line); }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.btn {
+  min-height: 56px; padding: 0 20px; border-radius: var(--r-md);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 16px; font-weight: 600; text-decoration: none;
+  border: 1px solid var(--line); background: transparent; color: var(--text);
+}
+.btn--primary { background: var(--mint); color: var(--on-mint); border-color: var(--mint); font-weight: 700; }
+.btn--surface { background: var(--surface); }
+.btn--dashed { border-style: dashed; border-color: var(--line-2); color: var(--text-2); }
+.btn--block { width: 100%; }
+.btn:disabled { background: var(--surface-2); border-color: var(--surface-2); color: var(--text-3); }
+.link {
+  min-height: 48px; display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; padding: 0 4px; color: var(--text-2);
+  font-size: 14px; text-decoration: underline; text-underline-offset: 3px;
+}
+.link--mint { color: var(--mint); text-decoration: none; font-weight: 600; font-size: 15px; }
+.icon-btn {
+  width: 48px; height: 48px; border-radius: 24px; border: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--text-2);
+}
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* Puces de déclencheur : sélection neutre (inversée) */
+.chip {
+  min-height: 48px; border-radius: var(--r-sm); padding: 0 8px;
+  background: var(--surface); color: var(--text-2); border: 1px solid var(--line);
+  font-size: 14px; font-weight: 600;
+}
+.chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+/* Échelle 1–5 : neutre par défaut, ambre pour l'intensité d'envie */
+.scale-btn {
+  height: 52px; border-radius: var(--r-sm);
+  background: var(--surface); color: var(--text-2); border: 1px solid var(--line);
+  font-family: var(--font-num); font-size: 18px; font-weight: 600;
+}
+.scale-btn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.scale--warm .scale-btn[aria-pressed="true"] { background: var(--warm); color: var(--on-warm); border-color: var(--warm); }
+
+.segmented { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; background: var(--surface); border-radius: 16px; padding: 4px; }
+.segmented button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font-size: 15px; font-weight: 600; }
+.segmented button[aria-pressed="true"] { background: var(--line); color: var(--text); }
+:root[data-theme="light"] .segmented button[aria-pressed="true"] { background: var(--surface-2); }
+
+.group { background: var(--surface); border-radius: 20px; padding: 0 16px; }
+.group > * + * { border-top: 1px solid var(--line); }
+.field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 8px 0; }
+.field__label { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.field__box {
+  flex: none; width: 128px; height: 48px; border-radius: 12px; padding: 0 12px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid transparent;
+}
+.field__box:focus-within { border-color: var(--mint); }
+.field__box.is-invalid { border-color: var(--warm); }
+.field__box input {
+  width: 100%; min-width: 0; border: 0; outline: none; background: transparent;
+  text-align: right; font-family: var(--font-num); font-size: 16px; /* 16 px : pas de zoom iOS */
+}
+.field__unit { font-size: 14px; color: var(--text-3); white-space: nowrap; }
+
+.switch { flex: none; width: 52px; height: 32px; border-radius: 16px; border: 0; padding: 3px; background: var(--line); display: flex; }
+.switch::after { content: ''; width: 26px; height: 26px; border-radius: 13px; background: var(--text-2); transition: transform .2s; }
+.switch[aria-checked="true"] { background: var(--mint); }
+.switch[aria-checked="true"]::after { background: var(--on-mint); transform: translateX(20px); }
+
+.progress { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.progress > span { display: block; height: 100%; border-radius: 3px; background: var(--mint); }
+
+/* =========================================================================
+   6. Feuille du bas, toast
+   ========================================================================= */
+.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; transition: opacity .2s; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
+  max-height: calc(100dvh - var(--safe-top) - 24px); overflow-y: auto;
+  background: var(--sheet); border-top: 1px solid var(--line); border-radius: 28px 28px 0 0;
+  padding: 12px var(--gutter) calc(var(--safe-bottom) + 28px);
+  display: flex; flex-direction: column; gap: 22px;
+  transform: translateY(100%); transition: transform .25s ease-out;
+}
+.sheet__grabber { align-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line); }
+.sheet-open .scrim { opacity: 1; }
+.sheet-open .sheet { transform: none; }
+.sheet .inner { max-width: 480px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+.toast {
+  position: fixed; left: 50%; z-index: 50;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 84px);
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+  width: min(calc(100% - 32px), 440px); min-height: 52px; padding: 4px 8px 4px 18px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--text); color: var(--bg); font-size: 15px; font-weight: 600;
+  box-shadow: var(--shadow); transition: opacity .2s, transform .2s;
+}
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast button { min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* =========================================================================
+   7. Mode test (?test)
+   ========================================================================= */
+.test-row { display: flex; gap: 10px; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.test-ok { color: var(--mint); }
+.test-ko { color: var(--warm); }
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+
+<a class="fab" href="#/envie" id="fab">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12c2.5-4 5.5-4 9 0s6.5 4 9 0"/></svg>
+  J'ai une envie
+</a>
+
+<nav class="tabbar" aria-label="Navigation principale">
+  <a class="tab" href="#/aujourdhui" data-tab="aujourdhui">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+    Aujourd'hui
+  </a>
+  <a class="tab" href="#/stats" data-tab="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M5 19V12M10 19V6M15 19V10M20 19V15"/></svg>
+    Stats
+  </a>
+  <a class="tab" href="#/corps" data-tab="corps">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h4l2.5-5.5 4.5 11 2.5-5.5h5.5"/></svg>
+    Corps
+  </a>
+  <a class="tab" href="#/checkin" data-tab="checkin">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z"/></svg>
+    Check-in
+  </a>
+  <a class="tab" href="#/reglages" data-tab="reglages">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></svg>
+    Réglages
+  </a>
+</nav>
+
+<div id="sheet-root"></div>
+<div class="toast" id="toast" role="status"><span id="toast-text"></span><button type="button" id="toast-action" hidden></button></div>
+<input type="file" id="import-input" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+
+/* =========================================================================
+   Constantes
+   ========================================================================= */
+const APP_VERSION = '0.1.0';
+const STORAGE_KEY = 'stase.v1';
+const BACKUP_KEY = 'stase.backup';
+const SCHEMA_VERSION = 1;
+const DAY_MS = 86400000;
+
+/** Déclencheurs : clé stockée → libellé affiché. */
+const TRIGGERS = [
+  ['ennui', 'Ennui'], ['stress', 'Stress'], ['cafe', 'Café'],
+  ['repas', 'Après repas'], ['soiree', 'Soirée'], ['reveil', 'Réveil']
+];
+const TRIGGER_LABEL = Object.fromEntries(TRIGGERS);
+const INTAKE_TYPES = ['snus', 'vape'];
+
+/* =========================================================================
+   Utilitaires
+   ========================================================================= */
+const Util = {
+  /** Échappe un texte avant de l'insérer dans du HTML. */
+  esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+  /** Lit un nombre saisi à la française (« 6,90 »). Renvoie null si invalide ou négatif. */
+  parseNum(input) {
+    const clean = String(input ?? '').replace(/\s/g, '').replace(',', '.');
+    if (clean === '' || !/^\d*\.?\d+$|^\d+\.?$/.test(clean)) return null;
+    const n = Number(clean);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  },
+  /** Affiche un nombre décimal à la française, sans zéros inutiles. */
+  formatNum(n, maxDigits = 2) {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: maxDigits }).format(n);
+  },
+  formatMoney(n) {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
+  },
+  uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  },
+  clampInt(value, min, max) {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) && n >= min && n <= max ? n : null;
+  }
+};
+
+/* =========================================================================
+   Dates — tout est calculé dans le fuseau local de l'appareil.
+   Les entrées sont stockées en timestamp (ms depuis 1970, universel) :
+   le « jour » d'une prise est recalculé à l'affichage, donc un changement
+   de fuseau ou un passage de minuit reste cohérent.
+   ========================================================================= */
+const Dates = {
+  pad(n) { return String(n).padStart(2, '0'); },
+  /** Clé de jour local « AAAA-MM-JJ » pour un timestamp. */
+  dayKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${Dates.pad(d.getMonth() + 1)}-${Dates.pad(d.getDate())}`;
+  },
+  todayKey() { return Dates.dayKey(Date.now()); },
+  /** Minuit local (timestamp) du jour donné par sa clé. */
+  keyToStart(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d).getTime();
+  },
+  /** Ajoute n jours calendaires à une clé (robuste aux changements d'heure). */
+  addDays(key, n) {
+    const [y, m, d] = key.split('-').map(Number);
+    return Dates.dayKey(new Date(y, m - 1, d + n).getTime());
+  },
+  /** Nombre de jours calendaires entre deux clés (b − a). */
+  diffDays(a, b) {
+    const toUtc = (k) => { const [y, m, d] = k.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+    return Math.round((toUtc(b) - toUtc(a)) / DAY_MS);
+  },
+  /** Liste des clés de jours de a à b inclus. */
+  range(a, b) {
+    const out = [];
+    for (let k = a; Dates.diffDays(k, b) >= 0; k = Dates.addDays(k, 1)) out.push(k);
+    return out;
+  },
+  formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  },
+  formatDayLong(ts) {
+    const s = new Date(ts).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  },
+  formatDayShort(ts) {
+    return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  },
+  /** Découpe une durée en jours, heures, minutes, secondes. */
+  splitDuration(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
+  },
+  /** Valeur pour <input type="datetime-local"> en heure locale. */
+  toInputValue(ts) {
+    const d = new Date(ts);
+    return `${Dates.dayKey(ts)}T${Dates.pad(d.getHours())}:${Dates.pad(d.getMinutes())}`;
+  },
+  fromInputValue(value) {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : null;
+  }
+};
+
+/* =========================================================================
+   Store — données en localStorage, versionnées, avec export/import JSON.
+   iOS peut purger le stockage d'une web app peu utilisée : l'export
+   régulier est la vraie sauvegarde.
+   ========================================================================= */
+const Store = {
+  data: null,
+  saveFailed: false,
+
+  defaults() {
+    return {
+      version: SCHEMA_VERSION,
+      settings: {
+        phase: 'observation',        // 'observation' | 'arret'
+        quitStart: null,             // timestamp du début de l'arrêt
+        baseline: null,              // { snusPerDay, vapePerDay, days } figé au passage en arrêt
+        snusBoxPrice: 0,             // € par boîte
+        snusPerBox: 20,              // portions par boîte
+        snusMg: 8,                   // mg de nicotine par portion
+        vapeFormat: 'capsule',       // 'capsule' | 'flacon'
+        vapeUnitPrice: 0,            // € par capsule ou flacon
+        vapeSessionsPerUnit: 0,      // sessions de vape par capsule ou flacon
+        reduction: { on: false, startDate: null, weeklyStep: 1 },
+        theme: 'dark',               // 'dark' | 'light'
+        lastExportAt: null
+      },
+      intakes: [],   // { id, type, ts, trigger, intensity }
+      cravings: [],  // { id, ts, trigger, intensity, resolved }
+      checkins: []   // { date, sleep, energy, mood, anxiety, hr }
+    };
+  },
+
+  /** Charge les données ; en cas de JSON corrompu, le garde de côté et repart à vide. */
+  load() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { raw = null; }
+    if (!raw) { Store.data = Store.defaults(); return; }
+    try {
+      Store.data = Store.normalize(JSON.parse(raw));
+    } catch (e) {
+      try { localStorage.setItem(STORAGE_KEY + '.corrompu', raw); } catch (_) { /* rien */ }
+      Store.data = Store.defaults();
+    }
+  },
+
+  save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Store.data));
+      Store.saveFailed = false;
+    } catch (e) {
+      Store.saveFailed = true;
+      UI.toast('Enregistrement impossible : stockage plein ou bloqué.');
+    }
+  },
+
+  /** Applique une modification, enregistre et redessine l'écran. */
+  update(mutator) {
+    mutator(Store.data);
+    Store.save();
+    App.render();
+  },
+
+  /** Remet n'importe quel objet au bon format (migration + nettoyage). */
+  normalize(obj) {
+    const base = Store.defaults();
+    if (!obj || typeof obj !== 'object') return base;
+    const s = Object.assign({}, base.settings, obj.settings || {});
+    s.reduction = Object.assign({}, base.settings.reduction, (obj.settings || {}).reduction || {});
+    if (!['observation', 'arret'].includes(s.phase)) s.phase = 'observation';
+    if (!['dark', 'light'].includes(s.theme)) s.theme = 'dark';
+    if (!['capsule', 'flacon'].includes(s.vapeFormat)) s.vapeFormat = 'capsule';
+    ['snusBoxPrice', 'snusPerBox', 'snusMg', 'vapeUnitPrice', 'vapeSessionsPerUnit'].forEach((k) => {
+      const n = Number(s[k]);
+      s[k] = Number.isFinite(n) && n >= 0 ? n : base.settings[k];
+    });
+    return {
+      version: SCHEMA_VERSION,
+      settings: s,
+      intakes: Store.cleanList(obj.intakes, Store.cleanIntake),
+      cravings: Store.cleanList(obj.cravings, Store.cleanCraving),
+      checkins: Store.cleanCheckins(obj.checkins)
+    };
+  },
+
+  cleanList(list, cleaner) {
+    if (!Array.isArray(list)) return [];
+    return list.map(cleaner).filter(Boolean).sort((a, b) => a.ts - b.ts);
+  },
+
+  cleanIntake(x) {
+    if (!x || !INTAKE_TYPES.includes(x.type) || !Number.isFinite(Number(x.ts))) return null;
+    return {
+      id: String(x.id || Util.uid()),
+      type: x.type,
+      ts: Number(x.ts),
+      trigger: TRIGGER_LABEL[x.trigger] ? x.trigger : null,
+      intensity: Util.clampInt(x.intensity, 1, 5)
+    };
+  },
+
+  cleanCraving(x) {
+    if (!x || !Number.isFinite(Number(x.ts))) return null;
+    return {
+      id: String(x.id || Util.uid()),
+      ts: Number(x.ts),
+      trigger: TRIGGER_LABEL[x.trigger] ? x.trigger : null,
+      intensity: Util.clampInt(x.intensity, 1, 5),
+      resolved: x.resolved !== false
+    };
+  },
+
+  /** Un check-in par jour : le plus récent l'emporte. */
+  cleanCheckins(list) {
+    if (!Array.isArray(list)) return [];
+    const byDate = {};
+    list.forEach((x) => {
+      if (!x || !/^\d{4}-\d{2}-\d{2}$/.test(x.date)) return;
+      const hr = Util.clampInt(x.hr, 25, 220);
+      byDate[x.date] = {
+        date: x.date,
+        sleep: Util.clampInt(x.sleep, 1, 5),
+        energy: Util.clampInt(x.energy, 1, 5),
+        mood: Util.clampInt(x.mood, 1, 5),
+        anxiety: Util.clampInt(x.anxiety, 1, 5),
+        hr: hr
+      };
+    });
+    return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  /** Texte JSON de sauvegarde. */
+  exportJson() {
+    return JSON.stringify({ app: 'STASE', appVersion: APP_VERSION, exportedAt: new Date().toISOString(), ...Store.data }, null, 2);
+  },
+
+  /** Valide un fichier importé. Renvoie { ok, data } ou { ok:false, error }. */
+  parseImport(text) {
+    let obj;
+    try { obj = JSON.parse(text); } catch (e) { return { ok: false, error: 'Ce fichier n’est pas un JSON lisible.' }; }
+    if (!obj || typeof obj !== 'object' || (!Array.isArray(obj.intakes) && !obj.settings)) {
+      return { ok: false, error: 'Ce fichier ne ressemble pas à une sauvegarde STASE.' };
+    }
+    return { ok: true, data: Store.normalize(obj) };
+  },
+
+  /** Remplace les données ; l'état précédent est gardé pour annulation. */
+  replaceAll(data) {
+    try { localStorage.setItem(BACKUP_KEY, JSON.stringify(Store.data)); } catch (e) { /* rien */ }
+    Store.data = data;
+    Store.save();
+  },
+
+  restoreBackup() {
+    try {
+      const raw = localStorage.getItem(BACKUP_KEY);
+      if (!raw) return false;
+      Store.data = Store.normalize(JSON.parse(raw));
+      Store.save();
+      return true;
+    } catch (e) { return false; }
+  }
+};
+
+/* =========================================================================
+   Icônes (traits SVG)
+   ========================================================================= */
+const Icon = {
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
+
+/* =========================================================================
+   UI — feuille du bas, toast, thème
+   ========================================================================= */
+const UI = {
+  toastTimer: null,
+
+  /** Petit message en bas ; action facultative (ex. « Annuler »). */
+  toast(text, actionLabel, onAction, duration = 4000) {
+    const el = document.getElementById('toast');
+    const btn = document.getElementById('toast-action');
+    document.getElementById('toast-text').textContent = text;
+    btn.hidden = !actionLabel;
+    btn.textContent = actionLabel || '';
+    btn.onclick = () => { UI.hideToast(); if (onAction) onAction(); };
+    el.classList.add('is-visible');
+    clearTimeout(UI.toastTimer);
+    UI.toastTimer = setTimeout(UI.hideToast, duration);
+  },
+  hideToast() { document.getElementById('toast').classList.remove('is-visible'); },
+
+  /** Ouvre une feuille du bas avec le HTML donné. */
+  openSheet(html, label) {
+    const root = document.getElementById('sheet-root');
+    root.innerHTML = `<div class="scrim" data-action="close-sheet"></div>
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="${Util.esc(label || '')}">
+        <div class="sheet__grabber"></div><div class="inner">${html}</div></div>`;
+    requestAnimationFrame(() => document.body.classList.add('sheet-open'));
+  },
+  /** Remplace le contenu de la feuille ouverte sans l'animer. */
+  updateSheet(html) {
+    const inner = document.querySelector('#sheet-root .inner');
+    if (inner) inner.innerHTML = html;
+  },
+  closeSheet() {
+    document.body.classList.remove('sheet-open');
+    setTimeout(() => {
+      if (!document.body.classList.contains('sheet-open')) document.getElementById('sheet-root').innerHTML = '';
+    }, 260);
+    UI.sheetState = null;
+  },
+
+  applyTheme() {
+    const theme = Store.data.settings.theme;
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#F3F5F9' : '#0B1220');
+  }
+};
+
+/* =========================================================================
+   Écrans — chaque fonction renvoie le HTML d'un écran.
+   ========================================================================= */
+const Screens = {
+  aujourdhui() {
+    return `<div class="screen">
+      <header class="header"><span class="wordmark">STASE</span><span class="pill">Observation</span></header>
+      <section class="stack">
+        <span class="label">${Util.esc(Dates.formatDayLong(Date.now()))}</span>
+        <div class="card card--empty">
+          <strong>Le socle est en place.</strong>
+          <span class="muted small">Le relevé en un tap arrive à l'étape 2.</span>
+        </div>
+      </section>
+    </div>`;
+  },
+
+  placeholder(title, step) {
+    return `<div class="screen">
+      <h1 class="title">${title}</h1>
+      <div class="card card--empty"><span class="muted small">Cet écran arrive à l'étape ${step}.</span></div>
+    </div>`;
+  },
+
+  stats() { return Screens.placeholder('Stats', 3); },
+  corps() { return Screens.placeholder('Corps', 6); },
+  checkin() { return Screens.placeholder('Ce soir', 4); },
+  envie() {
+    return `<div class="screen">
+      <header class="header"><span class="label" style="color:var(--warm)">Envie en cours</span>
+        <a class="icon-btn" href="#/aujourdhui" aria-label="Fermer">${Icon.close}</a></header>
+      <div class="card card--empty"><span class="muted small">Le minuteur arrive à l'étape 5.</span></div>
+    </div>`;
+  },
+
+  reglages() {
+    const s = Store.data.settings;
+    const n = Store.data.intakes.length;
+    const unit = s.vapeFormat === 'flacon' ? 'flacon' : 'capsule';
+    return `<div class="screen">
+      <h1 class="title">Réglages</h1>
+
+      <section class="stack">
+        <h2 class="label">Apparence</h2>
+        ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
+      </section>
+
+      <section class="stack">
+        <h2 class="label">Snus</h2>
+        <div class="group">
+          ${Screens.field('snusBoxPrice', 'Prix d’une boîte', s.snusBoxPrice, '€', 'decimal')}
+          ${Screens.field('snusPerBox', 'Portions par boîte', s.snusPerBox, '', 'numeric')}
+          ${Screens.field('snusMg', 'Force par portion', s.snusMg, 'mg', 'decimal')}
+        </div>
+      </section>
+
+      <section class="stack">
+        <h2 class="label">Vape</h2>
+        ${Screens.segmented('vapeFormat', [['capsule', 'Capsule'], ['flacon', 'Flacon']], s.vapeFormat, 'Format')}
+        <div class="group">
+          ${Screens.field('vapeUnitPrice', `Prix d’${unit === 'flacon' ? 'un flacon' : 'une capsule'}`, s.vapeUnitPrice, '€', 'decimal')}
+          ${Screens.field('vapeSessionsPerUnit', `Sessions par ${unit}`, s.vapeSessionsPerUnit, '', 'numeric', 'Une session = une prise notée « + Vape »')}
+        </div>
+      </section>
+
+      <section class="stack">
+        <h2 class="label">Données</h2>
+        <div class="grid-2">
+          <button type="button" class="btn btn--surface" data-action="export">Exporter</button>
+          <button type="button" class="btn btn--surface" data-action="import">Importer</button>
+        </div>
+        <p class="tiny faint">${Screens.backupHint(s.lastExportAt, n)}</p>
+        <p class="tiny faint">Tout reste sur ce téléphone. iOS peut effacer les données d'une web app peu utilisée : exporte de temps en temps.</p>
+      </section>
+
+      <p class="tiny faint" style="text-align:center">STASE ${APP_VERSION}</p>
+    </div>`;
+  },
+
+  backupHint(lastExportAt, count) {
+    if (!lastExportAt) return count ? 'Aucune sauvegarde exportée pour l’instant.' : 'Rien à sauvegarder pour l’instant.';
+    return `Dernier export : ${Util.esc(Dates.formatDayLong(lastExportAt))}.`;
+  },
+
+  /** Champ numérique de réglage (virgule acceptée). */
+  field(key, label, value, unit, mode, hint) {
+    const shown = value === null || value === undefined ? '' : Util.formatNum(value);
+    return `<label class="field">
+      <span class="field__label">${Util.esc(label)}${hint ? `<span class="tiny faint">${Util.esc(hint)}</span>` : ''}</span>
+      <span class="field__box"><input type="text" inputmode="${mode}" data-setting="${key}" value="${Util.esc(shown)}" autocomplete="off">
+      ${unit ? `<span class="field__unit">${unit}</span>` : ''}</span>
+    </label>`;
+  },
+
+  /** Contrôle segmenté lié à un réglage. */
+  segmented(key, options, current, label) {
+    return `<div class="segmented" role="group" aria-label="${Util.esc(label)}">${options.map(([value, text]) =>
+      `<button type="button" data-action="set-setting" data-key="${key}" data-value="${value}" aria-pressed="${value === current}">${text}</button>`
+    ).join('')}</div>`;
+  }
+};
+
+/* =========================================================================
+   Actions — reliées aux éléments via data-action
+   ========================================================================= */
+const Actions = {
+  'close-sheet'() { UI.closeSheet(); },
+
+  'set-setting'(el) {
+    Store.update((d) => { d.settings[el.dataset.key] = el.dataset.value; });
+    if (el.dataset.key === 'theme') UI.applyTheme();
+  },
+
+  export() { Backup.exportFile(); },
+  import() { document.getElementById('import-input').click(); },
+  'confirm-import'() { Backup.applyPending(); }
+};
+
+/* =========================================================================
+   Sauvegarde — export (partage iOS ou téléchargement) et import
+   ========================================================================= */
+const Backup = {
+  pending: null,
+
+  async exportFile() {
+    const name = `stase-${Dates.todayKey()}.json`;
+    const blob = new Blob([Store.exportJson()], { type: 'application/json' });
+    const file = typeof File === 'function' ? new File([blob], name, { type: 'application/json' }) : null;
+    try {
+      // Sur iPhone, la feuille de partage permet « Enregistrer dans Fichiers ».
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Sauvegarde STASE' });
+      } else {
+        Backup.download(blob, name);
+      }
+      Store.update((d) => { d.settings.lastExportAt = Date.now(); });
+      UI.toast('Sauvegarde exportée.');
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // partage annulé
+      Backup.download(blob, name);
+    }
+  },
+
+  download(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  },
+
+  /** Lecture du fichier choisi, puis demande de confirmation. */
+  readFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = Store.parseImport(String(reader.result));
+      if (!res.ok) { UI.toast(res.error); return; }
+      Backup.pending = res.data;
+      UI.openSheet(`
+        <h2 class="title" style="font-size:22px">Remplacer les données ?</h2>
+        <p class="muted small">Ce fichier contient ${res.data.intakes.length} prise(s), ${res.data.cravings.length} envie(s) et ${res.data.checkins.length} check-in(s).
+        Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées. Tu pourras annuler juste après.</p>
+        <div class="grid-2">
+          <button type="button" class="btn" data-action="close-sheet">Garder</button>
+          <button type="button" class="btn btn--primary" data-action="confirm-import">Remplacer</button>
+        </div>`, 'Importer une sauvegarde');
+    };
+    reader.onerror = () => UI.toast('Lecture du fichier impossible.');
+    reader.readAsText(file);
+  },
+
+  applyPending() {
+    if (!Backup.pending) return;
+    Store.replaceAll(Backup.pending);
+    Backup.pending = null;
+    UI.closeSheet();
+    UI.applyTheme();
+    App.render();
+    UI.toast('Données importées.', 'Annuler', () => {
+      if (Store.restoreBackup()) { UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
+    }, 8000);
+  }
+};
+
+/* =========================================================================
+   App — routage par #hash et rendu
+   ========================================================================= */
+const App = {
+  routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie'],
+  /** Écrans sans barre d'onglets ni bouton flottant. */
+  focused: ['envie'],
+
+  route() {
+    const name = location.hash.replace(/^#\/?/, '');
+    return App.routes.includes(name) ? name : 'aujourdhui';
+  },
+
+  render() {
+    const name = App.route();
+    const view = document.getElementById('view');
+    view.innerHTML = Screens[name]();
+    document.body.classList.toggle('no-chrome', App.focused.includes(name));
+    document.querySelectorAll('.tab').forEach((t) => {
+      if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+    });
+  },
+
+  onClick(e) {
+    const el = e.target.closest('[data-action]');
+    if (!el || !Actions[el.dataset.action]) return;
+    e.preventDefault();
+    Actions[el.dataset.action](el);
+  },
+
+  /** Saisie d'un réglage numérique : validée à la sortie du champ. */
+  onChange(e) {
+    const input = e.target;
+    if (input.id === 'import-input') {
+      if (input.files[0]) Backup.readFile(input.files[0]);
+      input.value = '';
+      return;
+    }
+    const key = input.dataset.setting;
+    if (!key) return;
+    const n = Util.parseNum(input.value);
+    if (n === null) {
+      input.parentElement.classList.add('is-invalid');
+      UI.toast('Nombre attendu, par exemple 6,90.');
+      return;
+    }
+    Store.update((d) => { d.settings[key] = n; });
+  },
+
+  boot() {
+    Store.load();
+    UI.applyTheme();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    document.addEventListener('click', App.onClick);
+    document.addEventListener('change', App.onChange);
+    window.addEventListener('hashchange', () => { App.render(); document.getElementById('view').scrollTop = 0; });
+    if (new URLSearchParams(location.search).has('test')) { Tests.run(); return; }
+    App.render();
+  }
+};
+
+/* =========================================================================
+   Tests — ouvrir index.html?test
+   ========================================================================= */
+const Tests = {
+  cases: [],
+  add(name, fn) { Tests.cases.push([name, fn]); },
+  eq(actual, expected, msg) {
+    const a = JSON.stringify(actual), b = JSON.stringify(expected);
+    if (a !== b) throw new Error(`${msg || ''} attendu ${b}, obtenu ${a}`);
+  },
+  near(actual, expected, msg, eps = 0.01) {
+    if (Math.abs(actual - expected) > eps) throw new Error(`${msg || ''} attendu ≈${expected}, obtenu ${actual}`);
+  },
+
+  run() {
+    const results = Tests.cases.map(([name, fn]) => {
+      try { fn(); return { name, ok: true }; } catch (e) { return { name, ok: false, err: e.message }; }
+    });
+    const ko = results.filter((r) => !r.ok).length;
+    document.body.classList.add('no-chrome');
+    document.getElementById('view').innerHTML = `<div class="screen">
+      <h1 class="title" id="test-summary">${ko ? `${ko} échec(s)` : 'Tous les tests passent'} · ${results.length} tests</h1>
+      <p class="small faint">Fuseau : ${Util.esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</p>
+      <div>${results.map((r) => `<div class="test-row"><span class="${r.ok ? 'test-ok' : 'test-ko'}">${r.ok ? 'OK' : 'KO'}</span>
+        <span>${Util.esc(r.name)}${r.ok ? '' : `<br><span class="small faint">${Util.esc(r.err)}</span>`}</span></div>`).join('')}</div>
+    </div>`;
+    console.log(results);
+  }
+};
+
+/* ---- Étape 1 : utilitaires, dates, stockage ---- */
+Tests.add('parseNum accepte la virgule et refuse le négatif', () => {
+  Tests.eq(Util.parseNum('6,90'), 6.9);
+  Tests.eq(Util.parseNum(' 20 '), 20);
+  Tests.eq(Util.parseNum('0'), 0);
+  Tests.eq(Util.parseNum('-1'), null);
+  Tests.eq(Util.parseNum('abc'), null);
+  Tests.eq(Util.parseNum(''), null);
+});
+Tests.add('dayKey utilise le jour local', () => {
+  const ts = new Date(2026, 9, 7, 23, 59).getTime();
+  Tests.eq(Dates.dayKey(ts), '2026-10-07');
+  Tests.eq(Dates.dayKey(ts + 2 * 60000), '2026-10-08');
+});
+Tests.add('addDays et diffDays traversent les changements d’heure', () => {
+  Tests.eq(Dates.addDays('2026-03-28', 1), '2026-03-29');
+  Tests.eq(Dates.addDays('2026-03-29', 1), '2026-03-30');
+  Tests.eq(Dates.addDays('2026-10-24', 2), '2026-10-26');
+  Tests.eq(Dates.diffDays('2026-03-01', '2026-04-01'), 31);
+  Tests.eq(Dates.range('2026-12-30', '2027-01-02').length, 4);
+});
+Tests.add('splitDuration', () => {
+  Tests.eq(Dates.splitDuration((3 * 86400 + 14 * 3600 + 22 * 60 + 8) * 1000), { d: 3, h: 14, m: 22, s: 8 });
+  Tests.eq(Dates.splitDuration(-5), { d: 0, h: 0, m: 0, s: 0 });
+});
+Tests.add('normalize complète un objet partiel', () => {
+  const d = Store.normalize({ settings: { snusBoxPrice: 7, phase: 'n’importe' } });
+  Tests.eq(d.settings.snusBoxPrice, 7);
+  Tests.eq(d.settings.phase, 'observation');
+  Tests.eq(d.settings.snusPerBox, 20);
+  Tests.eq(d.intakes, []);
+});
+Tests.add('normalize écarte les entrées invalides et trie', () => {
+  const d = Store.normalize({ intakes: [
+    { type: 'snus', ts: 2000, trigger: 'cafe', intensity: 9 },
+    { type: 'cigarette', ts: 1000 },
+    { type: 'vape', ts: 1000, trigger: 'inconnu', intensity: 3 },
+    null
+  ] });
+  Tests.eq(d.intakes.length, 2);
+  Tests.eq(d.intakes[0].type, 'vape');
+  Tests.eq(d.intakes[0].trigger, null);
+  Tests.eq(d.intakes[1].intensity, null);
+});
+Tests.add('un check-in par jour, le dernier l’emporte', () => {
+  const d = Store.normalize({ checkins: [{ date: '2026-10-07', sleep: 2 }, { date: '2026-10-07', sleep: 4 }, { date: 'hier' }] });
+  Tests.eq(d.checkins.length, 1);
+  Tests.eq(d.checkins[0].sleep, 4);
+});
+Tests.add('export puis import redonne les mêmes données', () => {
+  const saved = Store.data;
+  Store.data = Store.normalize({ intakes: [{ id: 'a', type: 'snus', ts: 1, trigger: 'stress', intensity: 2 }], settings: { snusBoxPrice: 6.9 } });
+  const res = Store.parseImport(Store.exportJson());
+  const expected = Store.data;
+  Store.data = saved;
+  Tests.eq(res.ok, true);
+  Tests.eq(res.data, expected);
+});
+Tests.add('import refuse un fichier étranger', () => {
+  Tests.eq(Store.parseImport('pas du json').ok, false);
+  Tests.eq(Store.parseImport('{"foo":1}').ok, false);
+});
+
+App.boot();
+</script>
+</body>
+</html>
