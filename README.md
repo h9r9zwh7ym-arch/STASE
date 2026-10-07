@@ -13,10 +13,10 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 ## Ce que fait l'app
 
 - **Questionnaire de départ** (facultatif) : usage, motivations, points de santé → bénéfices adaptés.
-- **Observation** : « + Snus » / « + Vape » en un tap, contexte facultatif (déclencheur, intensité), correction après coup, réduction progressive optionnelle.
-- **Stats** : prises par jour, moyenne 7 j, heures, déclencheurs, dépenses, nicotine du snus, corrélation avec le check-in.
+- **Observation** : « + Snus » / « + Vape » en un tap, contexte facultatif (déclencheur, intensité), millilitres de vape du jour, correction après coup (Historique), réduction progressive optionnelle.
+- **Stats** : prises par jour, moyenne 7 j, heures, déclencheurs, dépenses en CHF, nicotine estimée (snus : portions × mg ; vape : ml × mg/ml), corrélation avec le check-in.
 - **Check-in du soir** : sommeil, énergie, humeur, anxiété, fréquence cardiaque au repos.
-- **Arrêt** : temps sans nicotine en direct, économies et doses évitées par rapport à la moyenne réelle d'observation, meilleur enchaînement, message du jour.
+- **Arrêt** : temps sans nicotine en direct, économies (CHF), doses et ml évités, nicotine évitée, par rapport à la moyenne réelle d'observation ; meilleur enchaînement, message du jour.
 - **J'ai une envie** : minuteur de 10 minutes, respiration guidée, mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
 - **Corps** : frise de repères prudents (tendances générales, pas un avis médical) et bénéfices personnalisés.
@@ -27,6 +27,12 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 - **iOS peut effacer les données** d'une web app peu utilisée : faire un **export** régulier (Réglages → Données → Exporter, puis « Enregistrer dans Fichiers »). L'app le rappelle après 14 jours sans export.
 - Import : Réglages → Données → Importer (le fichier remplace les données, avec « Annuler » juste après).
 - Données de démo : Réglages → Données → Charger des données de démo (observation ou arrêt en cours).
+
+## Calcul des coûts
+
+- Snus : prix de la boîte ÷ portions par boîte = coût d'une prise.
+- Vape : si les ml du jour sont notés, ml × (prix ÷ contenance) ; sinon sessions × (prix ÷ sessions par capsule ou flacon).
+- Un prix à zéro n'est jamais affiché comme « 0 CHF » : l'app indique qu'il manque.
 
 ## Développement
 
