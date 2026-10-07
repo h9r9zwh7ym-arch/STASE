@@ -291,6 +291,21 @@ input[type="datetime-local"] { width: 100%; border: 0; outline: none; background
 .corr .num { font-size: 18px; font-weight: 600; text-align: center; }
 .corr > .tiny { text-align: center; }
 
+/* J'ai une envie : cercle de respiration */
+.breath { position: relative; width: min(290px, 74vw); aspect-ratio: 1; margin-top: 8px; }
+.breath svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.breath__track { fill: none; stroke: var(--surface-2); stroke-width: 5; }
+.breath__ring { fill: none; stroke: var(--mint); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.breath__disc {
+  position: absolute; inset: 12%; border-radius: 50%;
+  background: var(--mint-dim); border: 1px solid var(--mint-line);
+  animation: breathe 10s ease-in-out infinite;
+}
+@keyframes breathe { 0% { transform: scale(0.55); } 40% { transform: scale(1); } 100% { transform: scale(0.55); } }
+.breath__text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.breath__phase { font-family: var(--font-num); font-size: 26px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .breath__disc { transform: scale(0.8); } }
+
 /* Graphes SVG */
 .chart { display: block; width: 100%; height: auto; overflow: visible; }
 .chart text { font-family: var(--font-text); }
@@ -307,6 +322,15 @@ input[type="datetime-local"] { width: 100%; border: 0; outline: none; background
 .c-label-hi { fill: var(--text); }
 .c-row-label { font-size: 13px; fill: var(--text); }
 .c-row-pct { font-size: 13px; fill: var(--text-2); font-family: var(--font-num) !important; }
+.c-day { fill: var(--surface-2); }
+.c-day--clean, .c-day--ok { fill: var(--mint); }
+.c-day--today { fill: transparent; stroke: var(--mint); stroke-dasharray: 4 3; }
+.c-day--used, .c-day--ko { fill: var(--line); }
+.c-day-label { font-size: 12px; font-family: var(--font-num) !important; fill: var(--text-2); font-weight: 600; }
+.c-day-label--clean, .c-day-label--ok { fill: var(--on-mint); }
+.c-line { fill: none; stroke: var(--mint); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.c-area { fill: var(--mint-dim); }
+.c-dot { fill: var(--bg); stroke: var(--mint); stroke-width: 2.5; }
 .ghost-chart rect { fill: transparent; stroke: var(--line); stroke-dasharray: 4 3; }
 .ghost-chart rect.c-data-hi { fill: var(--data); stroke: none; }
 
@@ -521,13 +545,13 @@ const Store = {
         vapeFormat: 'capsule',       // 'capsule' | 'flacon'
         vapeUnitPrice: 0,            // € par capsule ou flacon
         vapeSessionsPerUnit: 0,      // sessions de vape par capsule ou flacon
-        reduction: { on: false, startDate: null, weeklyStep: 1 },
+        reduction: { on: false, startDate: null, weeklyStep: 1, base: null }, // cible = base − pas × semaines
         theme: 'dark',               // 'dark' | 'light'
         askContext: true,            // ouvrir la feuille contexte après « + Snus / + Vape »
         lastExportAt: null
       },
       intakes: [],   // { id, type, ts, trigger, intensity }
-      cravings: [],  // { id, ts, trigger, intensity, resolved }
+      cravings: [],  // { id, ts, trigger, intensity, resolved, duration }
       checkins: []   // { date, sleep, energy, mood, anxiety, hr }
     };
   },
@@ -573,6 +597,15 @@ const Store = {
     if (!['dark', 'light'].includes(s.theme)) s.theme = 'dark';
     if (!['capsule', 'flacon'].includes(s.vapeFormat)) s.vapeFormat = 'capsule';
     s.askContext = s.askContext !== false;
+    s.quitStart = s.quitStart !== null && Number.isFinite(Number(s.quitStart)) ? Number(s.quitStart) : null;
+    if (s.phase === 'arret' && s.quitStart === null) s.phase = 'observation';
+    s.baseline = Store.cleanBaseline(s.baseline);
+    const red = s.reduction;
+    red.on = red.on === true;
+    red.weeklyStep = [0.5, 1, 2].includes(Number(red.weeklyStep)) ? Number(red.weeklyStep) : 1;
+    red.base = red.base !== null && Number.isFinite(Number(red.base)) ? Number(red.base) : null;
+    red.startDate = /^\d{4}-\d{2}-\d{2}$/.test(red.startDate) ? red.startDate : null;
+    if (red.on && (red.base === null || !red.startDate)) red.on = false;
     ['snusBoxPrice', 'snusPerBox', 'snusMg', 'vapeUnitPrice', 'vapeSessionsPerUnit'].forEach((k) => {
       const n = Number(s[k]);
       s[k] = Number.isFinite(n) && n >= 0 ? n : base.settings[k];
@@ -584,6 +617,14 @@ const Store = {
       cravings: Store.cleanList(obj.cravings, Store.cleanCraving),
       checkins: Store.cleanCheckins(obj.checkins)
     };
+  },
+
+  cleanBaseline(b) {
+    if (!b || typeof b !== 'object') return null;
+    const n = (v) => (v !== null && Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null);
+    const snus = n(b.snusPerDay), vape = n(b.vapePerDay);
+    if (snus === null || vape === null) return null;
+    return { snusPerDay: snus, vapePerDay: vape, days: Math.round(n(b.days) || 0) };
   },
 
   cleanList(list, cleaner) {
@@ -609,7 +650,8 @@ const Store = {
       ts: Number(x.ts),
       trigger: TRIGGER_LABEL[x.trigger] ? x.trigger : null,
       intensity: Util.clampInt(x.intensity, 1, 5),
-      resolved: x.resolved !== false
+      resolved: x.resolved !== false,
+      duration: Number.isFinite(Number(x.duration)) && x.duration > 0 ? Math.round(Number(x.duration)) : null
     };
   },
 
@@ -884,6 +926,96 @@ const Charts = {
   }
 };
 
+/* ---- Charts : jours et courbe ---- */
+Object.assign(Charts, {
+  /** Grille de jours (7 par ligne). items : [{ label, state: 'clean'|'used'|'today'|'ok'|'ko' }] */
+  days(items, aria) {
+    const W = Charts.W, cols = 7, gap = 8, cell = (W - gap * (cols - 1)) / cols;
+    const rows = Math.ceil(items.length / cols);
+    const body = items.map((it, i) => {
+      const x = (i % cols) * (cell + gap), y = Math.floor(i / cols) * (cell + gap);
+      return `<rect class="c-day c-day--${it.state}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cell.toFixed(1)}" height="${cell.toFixed(1)}" rx="10"/>
+        <text class="c-day-label c-day-label--${it.state}" x="${(x + cell / 2).toFixed(1)}" y="${(y + cell / 2 + 4).toFixed(1)}" text-anchor="middle">${Util.esc(it.label)}</text>`;
+    }).join('');
+    return `<svg class="chart" viewBox="0 0 ${W} ${rows * cell + (rows - 1) * gap}" role="img" aria-label="${Util.esc(aria)}">${body}</svg>`;
+  },
+
+  /** Courbe cumulée avec aire, point final mis en avant. */
+  line(values, aria) {
+    const W = Charts.W, H = 120, pad = 8;
+    const max = Math.max(...values, 0.01);
+    const n = values.length;
+    const x = (i) => (n === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (n - 1));
+    const y = (v) => H - pad - (v / max) * (H - 2 * pad);
+    const pts = values.map((v, i) => `${x(i).toFixed(1)} ${y(v).toFixed(1)}`);
+    const area = `M${x(0).toFixed(1)} ${H} L${pts.join(' L')} L${x(n - 1).toFixed(1)} ${H} Z`;
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${Util.esc(aria)}">
+      <path class="c-area" d="${area}"/><path class="c-line" d="M${pts.join(' L')}"/>
+      <circle class="c-dot" cx="${x(n - 1).toFixed(1)}" cy="${y(values[n - 1]).toFixed(1)}" r="5"/></svg>`;
+  }
+});
+
+/* =========================================================================
+   Craving — minuteur de 10 minutes de « J'ai une envie »
+   Le temps est recalculé depuis l'heure de début : il reste juste même si
+   l'iPhone met l'app en veille.
+   ========================================================================= */
+const Craving = {
+  DURATION: 10 * 60000,
+  CIRC: 867.08, // 2π × 138 (rayon du cercle)
+  current: null,
+
+  state() {
+    if (!Craving.current) {
+      Craving.current = { start: Date.now(), pausedAt: null, pausedMs: 0, step: 'timer', trigger: null, intensity: null, duration: 0 };
+    }
+    return Craving.current;
+  },
+
+  elapsed(c, now = Date.now()) {
+    const end = c.pausedAt || now;
+    return Math.min(Craving.DURATION, Math.max(0, end - c.start - c.pausedMs));
+  },
+
+  /** Textes et tracé du cercle pour un temps écoulé (cycle 4 s inspire / 6 s expire). */
+  view(el, c) {
+    const left = Math.ceil((Craving.DURATION - el) / 1000);
+    const inhale = (el / 1000) % 10 < 4;
+    return {
+      dash: (Craving.CIRC * (1 - el / Craving.DURATION)).toFixed(1),
+      phase: c && c.pausedAt ? 'En pause' : inhale ? 'Inspire' : 'Expire',
+      hint: c && c.pausedAt ? 'Reprends quand tu veux' : inhale ? '4 secondes' : '6 secondes',
+      left: `${Dates.pad(Math.floor(left / 60))}:${Dates.pad(left % 60)}`
+    };
+  },
+
+  togglePause() {
+    const c = Craving.state(), now = Date.now();
+    if (c.pausedAt) { c.pausedMs += now - c.pausedAt; c.pausedAt = null; } else { c.pausedAt = now; }
+  },
+
+  finish() {
+    const c = Craving.state();
+    c.duration = Craving.elapsed(c);
+    c.step = 'log';
+  },
+
+  /** Enregistre l'envie ; resolved = traversée sans prise. */
+  save(resolved, withContext = true) {
+    const c = Craving.state();
+    Store.data.cravings.push({
+      id: Util.uid(), ts: c.start, resolved,
+      trigger: withContext ? c.trigger : null, intensity: withContext ? c.intensity : null,
+      duration: c.duration || Craving.elapsed(c)
+    });
+    Store.data.cravings.sort((a, b) => a.ts - b.ts);
+    Store.save();
+    const saved = { trigger: c.trigger, intensity: c.intensity };
+    Craving.current = null;
+    return saved;
+  }
+};
+
 /* =========================================================================
    Demo — jeu de données fictif, reproductible (graine fixe)
    ========================================================================= */
@@ -945,12 +1077,237 @@ const Demo = {
     return Store.normalize(data);
   },
 
+  /**
+   * Scénario « arrêt en cours » : 3 semaines d'observation, arrêt il y a
+   * 6 jours, une prise il y a 3 j 14 h, envies de moins en moins nombreuses.
+   */
+  generateQuit(now = Date.now(), seed = 42) {
+    const quitStart = now - 6 * DAY_MS;
+    const data = Demo.generate(quitStart - 60000, seed);
+    const rand = Demo.rng(seed + 1);
+    data.settings.phase = 'arret';
+    data.settings.quitStart = quitStart;
+    data.settings.baseline = Calc.baseline(data.intakes, quitStart);
+    const relapseTs = now - (3 * 86400 + 14 * 3600 + 22 * 60) * 1000;
+    data.intakes.push({ id: 'demo-reprise', type: 'vape', ts: relapseTs, trigger: 'soiree', intensity: 4 });
+    [5, 4, 4, 2, 2, 1, 1].forEach((count, day) => {
+      for (let i = 0; i < count; i++) {
+        const ts = quitStart + day * DAY_MS + (2 + rand() * 20) * 3600000;
+        if (ts > now) continue;
+        const slot = Demo.pickSlot(rand);
+        data.cravings.push({ id: `demo-envie-${day}-${i}`, ts, trigger: slot.trig, intensity: Math.max(1, 4 - Math.floor(day / 2) - Math.floor(rand() * 2)), resolved: true, duration: (3 + Math.floor(rand() * 7)) * 60000 });
+      }
+    });
+    data.cravings.push({ id: 'demo-envie-reprise', ts: relapseTs - 8 * 60000, trigger: 'soiree', intensity: 4, resolved: false, duration: 6 * 60000 });
+    return Store.normalize(data);
+  },
+
   /** Check-in fictif : un peu moins bon les jours chargés. */
   checkin(key, dayTotal, rand) {
     const base = dayTotal >= 9 ? 2 : 3;
     const v = (b) => Math.min(5, Math.max(1, b + Math.round(rand() * 2 - 0.5)));
     return { date: key, sleep: v(base), energy: v(base), mood: v(base + 1), anxiety: v(dayTotal >= 9 ? 4 : 2), hr: 58 + Math.floor(rand() * 12) };
   }
+};
+
+/* ---- Calc : phase arrêt et réduction progressive ---- */
+Object.assign(Calc, {
+  /**
+   * Référence : moyenne quotidienne réelle de l'observation, sur les jours
+   * complets avant le jour de l'arrêt. null sans jour complet.
+   */
+  baseline(intakes, quitTs) {
+    if (!intakes.length) return null;
+    const first = Dates.dayKey(intakes[0].ts);
+    const last = Dates.addDays(Dates.dayKey(quitTs), -1);
+    if (Dates.diffDays(first, last) < 0) return null;
+    const days = Calc.dailyCounts(intakes.filter((x) => x.ts < quitTs), first, last);
+    const sum = (k) => days.reduce((a, d) => a + d[k], 0);
+    return { snusPerDay: sum('snus') / days.length, vapePerDay: sum('vape') / days.length, days: days.length };
+  },
+
+  /** Prises faites depuis le début de l'arrêt. */
+  quitIntakes(intakes, quitStart) { return intakes.filter((x) => x.ts >= quitStart); },
+
+  /** Enchaînements sans nicotine (ms) : celui en cours et le meilleur. */
+  streaks(intakes, quitStart, now) {
+    const points = [quitStart, ...Calc.quitIntakes(intakes, quitStart).map((x) => x.ts).filter((t) => t <= now), now];
+    let best = 0;
+    for (let i = 1; i < points.length; i++) best = Math.max(best, points[i] - points[i - 1]);
+    return { current: now - points[points.length - 2], best, lastTs: points[points.length - 2] };
+  },
+
+  /**
+   * Jours sans nicotine au total : jours locaux, du jour de l'arrêt à hier,
+   * sans aucune prise. Une prise ne remet pas ce total à zéro.
+   */
+  cleanDays(intakes, quitStart, now) {
+    const from = Dates.dayKey(quitStart), to = Dates.addDays(Dates.dayKey(now), -1);
+    if (Dates.diffDays(from, to) < 0) return 0;
+    const used = new Set(Calc.quitIntakes(intakes, quitStart).map((x) => Dates.dayKey(x.ts)));
+    return Dates.range(from, to).filter((k) => !used.has(k)).length;
+  },
+
+  /**
+   * Doses évitées et argent économisé depuis l'arrêt, par rapport à la
+   * référence : (doses attendues − doses prises), jamais négatif.
+   * Un prix non renseigné donne money:null pour ce type.
+   */
+  avoided(intakes, settings, now) {
+    const base = settings.baseline, start = settings.quitStart;
+    const cost = Calc.unitCosts(settings);
+    const days = Math.max(0, now - start) / DAY_MS;
+    const taken = Calc.countByType(Calc.quitIntakes(intakes, start).filter((x) => x.ts <= now));
+    const one = (type) => {
+      const expected = base ? base[type + 'PerDay'] * days : 0;
+      const avoided = Math.max(0, Math.floor(expected - taken[type] + 1e-9));
+      return { expected, taken: taken[type], avoided, money: cost[type] === null ? null : avoided * cost[type] };
+    };
+    const snus = one('snus'), vape = one('vape');
+    vape.units = settings.vapeSessionsPerUnit > 0 ? vape.avoided / settings.vapeSessionsPerUnit : null;
+    const missing = [['snus', snus], ['vape', vape]].filter(([, x]) => x.money === null && x.avoided > 0).map(([t]) => t);
+    const money = snus.money === null && vape.money === null ? null : (snus.money || 0) + (vape.money || 0);
+    return { snus, vape, money, missing, days };
+  },
+
+  /** Économies cumulées à la fin de chaque jour depuis l'arrêt (aujourd'hui : maintenant). */
+  savingsSeries(intakes, settings, now) {
+    const keys = Dates.range(Dates.dayKey(settings.quitStart), Dates.dayKey(now));
+    return keys.map((key) => {
+      const end = Math.min(now, Dates.keyToStart(Dates.addDays(key, 1)));
+      const a = Calc.avoided(intakes, settings, end);
+      return { key, value: a.money || 0 };
+    });
+  },
+
+  /** Cible quotidienne de la réduction progressive pour un jour (null si inactive). */
+  reductionTarget(red, key) {
+    if (!red || !red.on || red.base === null || !red.startDate) return null;
+    const diff = Dates.diffDays(red.startDate, key);
+    if (diff < 0) return null;
+    return Math.max(0, Math.round(red.base - red.weeklyStep * Math.floor(diff / 7)));
+  },
+
+  /** Respect de la cible sur les n derniers jours complets depuis le début de la réduction. */
+  reductionDays(intakes, red, todayKey, n = 7) {
+    if (!red || !red.on || !red.startDate) return [];
+    let from = Dates.addDays(todayKey, -n);
+    if (Dates.diffDays(from, red.startDate) > 0) from = red.startDate;
+    const to = Dates.addDays(todayKey, -1);
+    if (Dates.diffDays(from, to) < 0) return [];
+    return Calc.dailyCounts(intakes, from, to).map((d) => {
+      const target = Calc.reductionTarget(red, d.key);
+      return { key: d.key, total: d.total, target, ok: d.total <= target };
+    });
+  },
+
+  /** Étape de l'arrêt selon l'enchaînement en cours (choisit les messages). */
+  stage(currentMs) {
+    const h = currentMs / 3600000;
+    if (h < 24) return 'start';
+    if (h < 72) return 'peak';
+    if (h < 24 * 30) return 'weeks';
+    return 'long';
+  }
+});
+
+/* =========================================================================
+   Messages du jour — courts, jamais culpabilisants. Un par jour et par
+   étape, choisi de façon stable (même message toute la journée).
+   ========================================================================= */
+const Messages = {
+  pools: {
+    start: [
+      'Les premières heures sont les plus bruyantes. Elles passent.',
+      'Tu n’as rien à prouver aujourd’hui, juste à traverser la journée.',
+      'Une envie à la fois. Pas besoin de penser à demain.',
+      'Un verre d’eau, un changement de pièce : les petits gestes comptent.',
+      'Ton corps commence déjà à faire le tri.',
+      'Chaque heure qui passe est une heure acquise.',
+      'Tu as décidé. Ce premier pas est souvent le plus dur.',
+      'Si une envie arrive, le bouton en bas est là pour ça.'
+    ],
+    peak: [
+      'Les premiers jours sont souvent les plus intenses. C’est le signe que ça bouge.',
+      'Irritabilité, fatigue, tête ailleurs ? C’est fréquent en ce moment, et ça se calme.',
+      'Une envie dure rarement plus de quelques minutes.',
+      'Dors un peu plus si tu peux : ton corps travaille.',
+      'Le pic du manque tombe souvent dans ces jours-là. Tu es en plein dedans, donc bientôt de l’autre côté.',
+      'Dix minutes de marche aident souvent plus qu’on ne croit.',
+      'Mâcher, croquer, boire frais : la bouche aime avoir de quoi faire.',
+      'Pas besoin d’aimer ces jours-là, juste de les traverser.',
+      'Dire « j’arrête » à quelqu’un de confiance allège souvent.'
+    ],
+    weeks: [
+      'Les envies s’espacent en général au fil des semaines.',
+      'Remarque les moments où tu n’y as pas pensé du tout.',
+      'Les vieux réflexes (café, après repas) mettent plus de temps à s’éteindre. C’est normal.',
+      'Le sommeil se stabilise souvent après les premières semaines.',
+      'L’argent reste dans ta poche : offre-toi quelque chose avec.',
+      'Une envie forte ne veut pas dire que ça ne marche pas. Elle passe quand même.',
+      'Chaque envie traversée affaiblit un peu l’automatisme.',
+      'Tu construis une nouvelle routine, une journée après l’autre.',
+      'Un moment difficile ? Reprends simplement là où tu en es.',
+      'Une soirée ou un voyage peuvent réveiller l’envie. Prévois un plan B.'
+    ],
+    long: [
+      'Tu as déjà fait le plus long du chemin.',
+      'Les envies se font rares, mais peuvent surprendre. Elles passent toujours.',
+      'Que fais-tu maintenant du temps que la nicotine prenait ?',
+      'Ta respiration, ton goût, ton budget : remarque ce qui a changé.',
+      'Garde un œil sur les moments de fête, sans t’inquiéter.',
+      'Le chemin parcouru mérite d’être salué, sans en faire une montagne.',
+      'La liberté, c’est aussi ne plus avoir à y penser.'
+    ],
+    any: [
+      'Respire lentement : quatre secondes pour inspirer, six pour expirer.',
+      'Tu fais ça pour toi, à ton rythme.',
+      'Ce qui compte, c’est la direction, pas la perfection.',
+      'Parle-toi comme tu parlerais à quelqu’un que tu aimes.',
+      'Une journée sans nicotine est une vraie journée gagnée.',
+      'Le calme revient toujours après la vague.',
+      'Tu as le droit de trouver ça difficile.',
+      'Note ce qui marche pour toi : c’est ton propre mode d’emploi.'
+    ]
+  },
+
+  /** Petit hachage stable d'une chaîne. */
+  hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  },
+
+  forDay(dayKey, stage) {
+    const pool = Messages.pools[stage].concat(Messages.pools.any);
+    return pool[Messages.hash(dayKey + stage) % pool.length];
+  },
+
+  count() { return Object.values(Messages.pools).reduce((a, p) => a + p.length, 0); }
+};
+
+/* =========================================================================
+   Jalons du corps — tendances générales pour le snus et la vape
+   (nicotine sans combustion), formulées prudemment. `h` = heures.
+   ========================================================================= */
+const MILESTONES = [
+  { h: 1, title: '1 heure', text: 'Le rythme cardiaque, accéléré par la nicotine, commence en général à redescendre.' },
+  { h: 24, title: '24 heures', text: 'La nicotine a en grande partie quitté le sang. Les envies peuvent encore être bien présentes.' },
+  { h: 72, title: '3 jours', text: 'Le pic du manque se situe souvent dans les premiers jours : envies, irritabilité, concentration en dents de scie. Ensuite, en général, ça décroît.' },
+  { h: 168, title: '1 semaine', text: 'Les symptômes physiques s’atténuent souvent. Le sommeil peut encore être chamboulé quelques jours.' },
+  { h: 336, title: '2 semaines', text: 'Les envies s’espacent en général et deviennent plus courtes.' },
+  { h: 720, title: '1 mois', text: 'Sommeil et humeur se stabilisent souvent. Les réflexes liés aux habitudes (café, repas) s’estompent peu à peu.' },
+  { h: 1008, title: '6 semaines', text: 'Pour le snus : la gencive là où se posait la portion commence souvent à se réparer. Une rétraction déjà installée ne revient pas toujours.', tag: 'snus' },
+  { h: 2160, title: '3 mois', text: 'L’humeur et l’anxiété sont souvent égales ou meilleures qu’avant l’arrêt. Les envies deviennent rares.' }
+];
+
+/** Prochain jalon et progression (0–1) pour un enchaînement donné. */
+Calc.nextMilestone = function (currentMs) {
+  const h = currentMs / 3600000;
+  const idx = MILESTONES.findIndex((m) => m.h > h);
+  if (idx === -1) return null;
+  const prevH = idx === 0 ? 0 : MILESTONES[idx - 1].h;
+  return { ...MILESTONES[idx], index: idx, progress: Math.min(1, Math.max(0, (h - prevH) / (MILESTONES[idx].h - prevH))), remainingMs: MILESTONES[idx].h * 3600000 - currentMs };
 };
 
 /* =========================================================================
@@ -1056,8 +1413,12 @@ const UI = {
    Écrans — chaque fonction renvoie le HTML d'un écran.
    ========================================================================= */
 const Screens = {
-  /** Aujourd'hui — phase observation : compteur, relevé en un tap, liste du jour. */
   aujourdhui() {
+    return Store.data.settings.phase === 'arret' ? Screens.todayQuit() : Screens.todayObservation();
+  },
+
+  /** Aujourd'hui — phase observation : compteur, relevé en un tap, liste du jour. */
+  todayObservation() {
     const today = Dates.todayKey();
     const key = App.viewDay || today;
     const isToday = key === today;
@@ -1074,6 +1435,7 @@ const Screens = {
           <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ${isToday ? 'aujourd’hui' : 'ce jour-là'}</span>
         </div>
         <p class="small muted">${c.snus} snus <span class="faint">·</span> ${c.vape} vape${avg ? ` <span class="faint">·</span> moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}` : ''}</p>
+        ${Screens.targetLine(key, c.total, isToday)}
       </section>
 
       ${isToday ? `<div class="grid-2">
@@ -1089,6 +1451,163 @@ const Screens = {
         ${list.length ? list.slice().reverse().map(Screens.intakeRow).join('') : Screens.todayEmpty(isToday)}
         <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
       </section>
+    </div>`;
+  },
+
+  /** Ligne « cible du jour » de la réduction progressive. */
+  targetLine(key, total, isToday) {
+    const target = Calc.reductionTarget(Store.data.settings.reduction, key);
+    if (target === null) return '';
+    let status;
+    if (total < target) status = isToday ? `encore ${target - total} avant la cible` : 'cible respectée';
+    else if (total === target) status = isToday ? 'cible atteinte' : 'cible respectée';
+    else status = 'au-dessus de la cible, ce n’est qu’un repère';
+    const ok = total <= target;
+    return `<p class="small"><span class="pill ${ok ? 'pill--mint' : ''}" style="padding:4px 10px">Cible ${target}</span>
+      <span class="${ok ? 'muted' : 'faint'}" style="margin-left:6px">${status}</span></p>`;
+  },
+
+  /** Aujourd'hui — phase arrêt : temps écoulé en direct, économies, doses évitées. */
+  todayQuit() {
+    const st = Store.data.settings, now = Date.now();
+    const streak = Calc.streaks(Store.data.intakes, st.quitStart, now);
+    const av = Calc.avoided(Store.data.intakes, st, now);
+    const dayN = Dates.diffDays(Dates.dayKey(st.quitStart), Dates.todayKey()) + 1;
+    const next = Calc.nextMilestone(streak.current);
+    const traversed = Store.data.cravings.filter((c) => c.resolved && c.ts >= st.quitStart).length;
+    const money = av.money === null ? '—' : Util.formatMoney(av.money);
+    const units = av.vape.units !== null && av.vape.avoided > 0 ? ` · ≈ ${Util.formatNum(av.vape.units, 1)} ${st.vapeFormat === 'flacon' ? 'flacon' : 'capsule'}${av.vape.units >= 2 ? 's' : ''}` : '';
+    return `<div class="screen">
+      <header class="header"><span class="wordmark">STASE</span><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
+
+      <section class="stack" style="gap:6px">
+        <span class="label">Sans nicotine depuis</span>
+        <span class="big-number" style="font-size:72px;line-height:1" data-live="since-big">${Screens.sinceBig(streak.current)}</span>
+        <span class="num muted" style="font-size:22px" data-live="since-small">${Screens.sinceSmall(streak.current)}</span>
+      </section>
+
+      ${next ? `<a class="stack" href="#/corps" style="gap:10px;text-decoration:none;color:inherit">
+        <div class="row small"><span class="muted">Prochain repère : ${next.title}</span><span class="num" style="color:var(--mint);font-weight:600">${Math.floor(next.progress * 100)} %</span></div>
+        <div class="progress"><span style="width:${(next.progress * 100).toFixed(1)}%"></span></div>
+      </a>` : ''}
+
+      <div class="grid-2">
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Économisé</span><span class="value value--mint">${money}</span>
+          ${av.missing.length ? '<a class="tiny faint" href="#/reglages">prix à renseigner</a>' : ''}</div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Meilleur enchaînement</span><span class="value">${Screens.durationShort(streak.best)}</span></div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Snus évités</span><span class="value">${av.snus.avoided}</span><span class="tiny faint">portion${av.snus.avoided > 1 ? 's' : ''}</span></div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Vape évitée</span><span class="value">${av.vape.avoided}</span><span class="tiny faint">session${av.vape.avoided > 1 ? 's' : ''}${units}</span></div>
+      </div>
+      ${st.baseline ? '' : '<p class="small muted">Pas de référence : indique ta consommation habituelle dans <a class="link--mint" href="#/reglages">Réglages</a> pour calculer économies et doses évitées.</p>'}
+
+      <section class="card card--outline" style="gap:8px">
+        <span class="label">Message du jour</span>
+        <p style="font-size:16px;line-height:1.5">${Util.esc(Messages.forDay(Dates.todayKey(), Calc.stage(streak.current)))}</p>
+        ${traversed ? `<span class="small faint">${traversed} envie${traversed > 1 ? 's' : ''} traversée${traversed > 1 ? 's' : ''} depuis le début.</span>` : ''}
+      </section>
+
+      <a class="link" href="#/reprendre" style="align-self:center">Noter une prise</a>
+    </div>`;
+  },
+
+  sinceBig(ms) { const d = Dates.splitDuration(ms); return d.d ? `${d.d} j ${d.h} h` : `${d.h} h`; },
+  sinceSmall(ms) { const d = Dates.splitDuration(ms); return `${Dates.pad(d.m)} min ${Dates.pad(d.s)} s`; },
+  durationShort(ms) {
+    const d = Dates.splitDuration(ms);
+    if (d.d) return `${d.d} j${d.h ? ` ${d.h} h` : ''}`;
+    if (d.h) return `${d.h} h`;
+    return `${d.m} min`;
+  },
+
+  /** Après une prise en phase arrêt : rien n'est effacé, on note et on repart. */
+  reprendre() {
+    const st = Store.data.settings;
+    if (st.phase !== 'arret') return Screens.todayObservation();
+    const now = Date.now();
+    const clean = Calc.cleanDays(Store.data.intakes, st.quitStart, now);
+    const best = Calc.streaks(Store.data.intakes, st.quitStart, now).best;
+    const d = App.relapseDraft || (App.relapseDraft = { type: 'snus', trigger: null });
+    return `<div class="screen">
+      <header class="header"><span class="wordmark">STASE</span>
+        <a class="icon-btn" href="#/aujourdhui" aria-label="Fermer sans rien noter">${Icon.close}</a></header>
+      <section class="stack" style="gap:14px;padding-top:8px">
+        <h1 class="title title--soft">Une prise n'efface pas le chemin parcouru.</h1>
+        <p class="muted">La plupart des gens arrêtent après plusieurs essais. Ce que tu as appris reste acquis. On note, et on repart.</p>
+      </section>
+      <div class="grid-2">
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Jours sans nicotine, au total</span><span class="value value--mint" style="font-size:40px">${clean}</span></div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Meilleur enchaînement</span><span class="value" style="font-size:40px">${Screens.durationShort(best)}</span></div>
+      </div>
+      <section class="stack">
+        <span class="label">Ce que tu as pris</span>
+        ${Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], d.type, 'Type', 'relapse-type')}
+      </section>
+      <section class="stack">
+        <span class="label">Le contexte, si tu veux</span>
+        <div class="grid-3">${TRIGGERS.map(([k, label]) =>
+          `<button type="button" class="chip" data-action="relapse-trigger" data-value="${k}" aria-pressed="${d.trigger === k}">${label}</button>`).join('')}</div>
+      </section>
+      <div class="stack" style="gap:8px">
+        <button type="button" class="btn btn--primary btn--block" data-action="relapse-save">Reprendre</button>
+        <button type="button" class="link" data-action="relapse-observation" style="align-self:center">Noter et repasser en observation pour l'instant</button>
+      </div>
+    </div>`;
+  },
+
+  /** « J'ai une envie » : minuteur de 10 min + respiration, puis mini-relevé. */
+  envie() {
+    const c = Craving.state();
+    return c.step === 'log' ? Screens.envieLog(c) : Screens.envieTimer(c);
+  },
+
+  envieTimer(c) {
+    const el = Craving.elapsed(c);
+    const v = Craving.view(el, c);
+    return `<div class="screen" style="align-items:center;min-height:calc(100dvh - var(--safe-top) - var(--safe-bottom) - 60px)">
+      <header class="header" style="align-self:stretch"><span class="label" style="color:var(--warm)">Envie en cours</span>
+        <button type="button" class="icon-btn" data-action="craving-close" aria-label="Fermer">${Icon.close}</button></header>
+      <section class="stack" style="align-self:stretch;gap:8px">
+        <h1 class="title title--soft">Ça va passer.</h1>
+        <p class="muted small">Suis le cercle. Une envie dure rarement plus de dix minutes.</p>
+      </section>
+      <div class="breath" aria-hidden="true">
+        <svg viewBox="0 0 290 290"><circle cx="145" cy="145" r="138" class="breath__track"/>
+          <circle cx="145" cy="145" r="138" class="breath__ring" stroke-dasharray="${Craving.CIRC}" stroke-dashoffset="${v.dash}" data-live="craving-ring"/></svg>
+        <div class="breath__disc" style="animation-delay:-${(el / 1000) % 10}s;animation-play-state:${c.pausedAt ? 'paused' : 'running'}"></div>
+        <div class="breath__text"><span class="breath__phase" data-live="craving-phase">${v.phase}</span><span class="small muted" data-live="craving-hint">${v.hint}</span></div>
+      </div>
+      <div class="stack" style="align-items:center;gap:2px">
+        <span class="num" style="font-size:48px;font-weight:500" data-live="craving-left">${v.left}</span>
+        <span class="small faint">restantes</span>
+      </div>
+      <div class="grid-2" style="align-self:stretch;margin-top:auto">
+        <button type="button" class="btn" data-action="craving-pause">${c.pausedAt ? 'Reprendre' : 'Pause'}</button>
+        <button type="button" class="btn btn--primary" data-action="craving-done">C'est passé</button>
+      </div>
+    </div>`;
+  },
+
+  envieLog(c) {
+    const dur = Dates.splitDuration(c.duration);
+    const st = Store.data.settings;
+    const since = st.phase === 'arret' ? st.quitStart : 0;
+    const nth = Store.data.cravings.filter((x) => x.resolved && x.ts >= since).length + 1;
+    return `<div class="screen">
+      <section class="stack" style="gap:12px">
+        <span class="done-mark" style="width:48px;height:48px;border-radius:24px">${Icon.check}</span>
+        <h1 class="title title--soft">Elle est passée.</h1>
+        <p class="muted">${dur.m} min ${Dates.pad(dur.s)} s. Ce sera ta ${nth}<sup>${nth === 1 ? 're' : 'e'}</sup> envie traversée${st.phase === 'arret' ? ' depuis l’arrêt' : ''}.</p>
+      </section>
+      ${IntakeSheet.triggersHtml(c.trigger).replace(/sheet-trigger/g, 'craving-trigger')}
+      ${IntakeSheet.intensityHtml(c.intensity).replace(/sheet-intensity/g, 'craving-intensity').replace('Intensité de l\'envie', 'Intensité au plus fort')}
+      <section class="card card--outline"><p style="font-size:16px;line-height:1.5">Chaque envie traversée sans céder affaiblit un peu l'automatisme. Celle-ci compte.</p></section>
+      <div class="stack" style="gap:6px">
+        <button type="button" class="btn btn--primary btn--block" data-action="craving-save">Enregistrer</button>
+        <div class="row" style="justify-content:center;gap:16px">
+          <button type="button" class="link" data-action="craving-skip">Passer</button>
+          <button type="button" class="link" data-action="craving-gave-in">J'ai fini par prendre</button>
+        </div>
+      </div>
     </div>`;
   },
 
@@ -1130,8 +1649,12 @@ const Screens = {
     </div>`;
   },
 
-  /** Stats — phase observation. */
   stats() {
+    return Store.data.settings.phase === 'arret' ? Screens.statsQuit() : Screens.statsObservation();
+  },
+
+  /** Stats — phase observation. */
+  statsObservation() {
     const intakes = Store.data.intakes;
     if (!intakes.length) return Screens.statsEmpty();
     const n = App.statsRange;
@@ -1148,6 +1671,7 @@ const Screens = {
           <button type="button" data-action="stats-range" data-value="30" aria-pressed="${n === 30}">30 j</button>
         </div>
       </header>
+      ${Screens.statsReduction(intakes, today)}
       ${daysKnown < 3 ? `<p class="small muted">Encore ${3 - daysKnown} jour${3 - daysKnown > 1 ? 's' : ''} de relevés pour des moyennes parlantes.</p>` : ''}
       ${Screens.statsDaily(intakes, from, today, n, avg)}
       ${Screens.statsHours(inRange)}
@@ -1155,6 +1679,78 @@ const Screens = {
       ${Screens.correlationCard()}
       ${Screens.statsSpend(intakes, today)}
       ${Screens.statsNicotine(avg, inRange)}
+    </div>`;
+  },
+
+  /** Suivi de la réduction progressive. */
+  statsReduction(intakes, today) {
+    const red = Store.data.settings.reduction;
+    if (!red.on) return '';
+    const days = Calc.reductionDays(intakes, red, today, 7);
+    const ok = days.filter((d) => d.ok).length;
+    const now = Calc.reductionTarget(red, today), next = Calc.reductionTarget(red, Dates.addDays(today, 7));
+    return `<section class="card card--featured" style="gap:12px">
+      <span class="label" style="color:var(--mint)">Réduction progressive</span>
+      ${days.length
+        ? `<span class="value" style="font-size:24px">Cible respectée ${ok} jour${ok > 1 ? 's' : ''} sur ${days.length}</span>
+           ${Charts.days(days.map((d) => ({ label: `${d.total}/${d.target}`, state: d.ok ? 'ok' : 'ko' })), 'Respect de la cible, jour par jour')}`
+        : '<span class="small muted">Le suivi commence demain : aujourd’hui n’est pas terminé.</span>'}
+      <p class="small muted">Cible actuelle : ${now} par jour${next !== now ? ` · la semaine prochaine : ${next}` : ''}. Les jours au-dessus ne sont qu'un repère.</p>
+    </section>`;
+  },
+
+  /** Stats — phase arrêt : jours sans nicotine, envies, économies. */
+  statsQuit() {
+    const st = Store.data.settings, now = Date.now(), today = Dates.todayKey();
+    const startKey = Dates.dayKey(st.quitStart);
+    const allKeys = Dates.range(startKey, today);
+    const keys = allKeys.slice(-28);
+    const used = {};
+    Calc.quitIntakes(Store.data.intakes, st.quitStart).forEach((x) => { const k = Dates.dayKey(x.ts); used[k] = (used[k] || 0) + 1; });
+    const clean = Calc.cleanDays(Store.data.intakes, st.quitStart, now);
+    const dayItems = keys.map((k) => ({ label: String(Number(k.slice(8))), state: used[k] ? 'used' : k === today ? 'today' : 'clean' }));
+    const cravings = Store.data.cravings.filter((c) => c.ts >= st.quitStart);
+    const cKeys = allKeys.slice(-14);
+    const perDay = cKeys.map((k) => ({ v: cravings.filter((c) => Dates.dayKey(c.ts) === k).length, label: k === today ? 'Auj.' : String(Number(k.slice(8))), hi: k === today }));
+    const traversed = cravings.filter((c) => c.resolved).length;
+    const avgInt = Calc.mean(cravings.map((c) => c.intensity));
+    const avgDur = Calc.mean(cravings.map((c) => c.duration));
+    const series = Calc.savingsSeries(Store.data.intakes, st, now);
+    const av = Calc.avoided(Store.data.intakes, st, now);
+    const dayN = allKeys.length;
+    return `<div class="screen">
+      <header class="header"><h1 class="title">Stats</h1><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
+
+      <section class="card" style="gap:14px">
+        <div class="stack" style="gap:4px"><span class="small muted">Jours sans nicotine</span>
+          <span class="value">${clean} <span class="small muted" style="font-family:var(--font-text);font-weight:500">jour${clean > 1 ? 's' : ''} complet${clean > 1 ? 's' : ''} sur ${Math.max(0, dayN - 1)}</span></span></div>
+        ${Charts.days(dayItems, 'Jours depuis l’arrêt : sans nicotine ou avec prise')}
+        <p class="tiny faint">Menthe : jour sans nicotine. Gris : jour avec une prise. Le total ne repart jamais à zéro.</p>
+      </section>
+
+      <section class="card" style="gap:14px">
+        <div class="row" style="align-items:flex-end">
+          <div class="stack" style="gap:4px"><span class="small muted">Envies par jour</span>
+            <span class="value">${cravings.length}</span></div>
+          ${avgInt !== null ? `<span class="small muted">intensité moy. ${Util.formatNum(avgInt, 1)}</span>` : ''}
+        </div>
+        ${cravings.length ? Charts.bars(perDay, { height: 130, tone: 'warm', aria: 'Envies par jour depuis l’arrêt' }) : '<p class="small faint">Aucune envie notée. Le bouton « J’ai une envie » les enregistre.</p>'}
+      </section>
+
+      <section class="card" style="gap:14px">
+        <div class="row" style="align-items:flex-end">
+          <div class="stack" style="gap:4px"><span class="small muted">Économies cumulées</span>
+            <span class="value value--mint">${av.money === null ? '—' : Util.formatMoney(av.money)}</span></div>
+          ${av.money !== null && av.days >= 1 ? `<span class="small muted">≈ ${Util.formatMoney((av.money / av.days) * 30, 0)} par mois</span>` : ''}
+        </div>
+        ${av.money !== null ? Charts.line(series.map((p) => p.value), 'Économies cumulées depuis l’arrêt') : '<p class="small muted">Renseigne les prix dans <a class="link--mint" href="#/reglages">Réglages</a> pour voir tes économies.</p>'}
+      </section>
+
+      <div class="grid-2">
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Envies traversées</span><span class="value" style="font-size:28px">${traversed}</span></div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Durée moyenne</span><span class="value" style="font-size:28px">${avgDur !== null ? `${Math.max(1, Math.round(avgDur / 60000))} min` : '—'}</span></div>
+      </div>
+      ${Screens.correlationCard()}
     </div>`;
   },
 
@@ -1330,13 +1926,6 @@ const Screens = {
       <p class="tiny faint">Moyennes sur 5, à partir de ${r.days} jours (${r.low.days} légers, ${r.high.days} chargés). C'est une tendance, pas une preuve : le lien peut aller dans les deux sens, une mauvaise nuit peut aussi donner plus envie.</p>
     </section>`;
   },
-  envie() {
-    return `<div class="screen">
-      <header class="header"><span class="label" style="color:var(--warm)">Envie en cours</span>
-        <a class="icon-btn" href="#/aujourdhui" aria-label="Fermer">${Icon.close}</a></header>
-      <div class="card card--empty"><span class="muted small">Le minuteur arrive à l'étape 5.</span></div>
-    </div>`;
-  },
 
   reglages() {
     const s = Store.data.settings;
@@ -1349,6 +1938,8 @@ const Screens = {
         <h2 class="label">Apparence</h2>
         ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
       </section>
+
+      ${Screens.modeSection(s)}
 
       <section class="stack">
         <h2 class="label">Relevé</h2>
@@ -1387,6 +1978,42 @@ const Screens = {
       </section>
 
       <p class="tiny faint" style="text-align:center">STASE ${APP_VERSION}</p>
+    </div>`;
+  },
+
+  /** Réglages > Mode : observation / arrêt, référence, réduction progressive. */
+  modeSection(s) {
+    const arret = s.phase === 'arret';
+    const b = s.baseline;
+    const red = s.reduction;
+    const target = Calc.reductionTarget(red, Dates.todayKey());
+    return `<section class="stack">
+      <h2 class="label">Mode</h2>
+      <div class="segmented" role="group" aria-label="Mode">
+        <button type="button" data-action="phase-ask" data-value="observation" aria-pressed="${!arret}">Observation</button>
+        <button type="button" data-action="phase-ask" data-value="arret" aria-pressed="${arret}">Arrêt</button>
+      </div>
+      <p class="small muted">${arret
+        ? 'Le compteur part de ta dernière prise. Les stats montrent tes jours sans nicotine, tes envies et tes économies.'
+        : 'Tu notes sans objectif. Passe en arrêt quand tu te sens prêt : ta moyenne réelle servira de référence.'}</p>
+      ${arret ? `<div class="group">
+        <div class="field"><span class="field__label">Début de l'arrêt</span><span class="muted small">${Util.esc(Dates.formatDayShort(s.quitStart))}, ${Dates.formatTime(s.quitStart)}</span></div>
+        <div class="field"><span class="field__label"><span>Référence</span><span class="tiny faint">${b ? `${Util.formatNum(b.snusPerDay, 1)} snus · ${Util.formatNum(b.vapePerDay, 1)} vape par jour${b.days ? ` (${b.days} j d'observation)` : ''}` : 'non renseignée'}</span></span>
+          <button type="button" class="link link--mint" data-action="baseline-edit">Modifier</button></div>
+      </div>` : `<div class="group">
+        ${Screens.toggleRow('reduction-toggle', 'Réduction progressive', 'Baisser doucement avant d’arrêter', red.on)}
+        ${red.on ? `<div class="field"><span class="field__label"><span>Baisse par semaine</span><span class="tiny faint">Cible du jour : ${target} (départ ${Util.formatNum(red.base, 1)})</span></span>
+          <div class="segmented" style="width:168px" role="group" aria-label="Baisse par semaine">${[[0.5, '0,5'], [1, '1'], [2, '2']].map(([v, l]) =>
+            `<button type="button" data-action="reduction-step" data-value="${v}" aria-pressed="${red.weeklyStep === v}">${l}</button>`).join('')}</div></div>` : ''}
+      </div>`}
+    </section>`;
+  },
+
+  /** Ligne avec interrupteur relié à une action. */
+  toggleRow(action, label, hint, on) {
+    return `<div class="field">
+      <span class="field__label"><span>${Util.esc(label)}</span>${hint ? `<span class="tiny faint">${Util.esc(hint)}</span>` : ''}</span>
+      <button type="button" class="switch" role="switch" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-action="${action}"></button>
     </div>`;
   },
 
@@ -1534,6 +2161,77 @@ const IntakeSheet = {
 };
 
 /* =========================================================================
+   Feuilles de changement de mode et de référence
+   ========================================================================= */
+const PhaseSheet = {
+  /** Champs « référence » (prises par jour), pré-remplis. */
+  baselineFields(snus, vape) {
+    const f = (key, label, v) => `<label class="field" style="padding:0"><span class="field__label">${label}</span>
+      <span class="field__box"><input type="text" inputmode="decimal" data-sheet="${key}" value="${v === null ? '' : Util.formatNum(v, 1)}" autocomplete="off">
+      <span class="field__unit">/ jour</span></span></label>`;
+    return `<div class="group">${f('base-snus', 'Snus', snus)}${f('base-vape', 'Vape (sessions)', vape)}</div>`;
+  },
+
+  /** Lit les deux champs de référence ; null si invalide. */
+  readBaseline() {
+    const snus = Util.parseNum(document.querySelector('[data-sheet="base-snus"]').value);
+    const vape = Util.parseNum(document.querySelector('[data-sheet="base-vape"]').value);
+    if (snus === null || vape === null) { UI.toast('Indique un nombre par jour pour le snus et la vape (0 si tu n’en prends pas).'); return null; }
+    if (snus + vape === 0) { UI.toast('La référence ne peut pas être nulle pour les deux.'); return null; }
+    return { snusPerDay: snus, vapePerDay: vape };
+  },
+
+  openQuit() {
+    const now = Date.now();
+    const intakes = Store.data.intakes;
+    const last = intakes.length ? intakes[intakes.length - 1].ts : null;
+    const b = Calc.baseline(intakes, now);
+    UI.sheetState = { kind: 'quit', from: last && now - last < 3 * DAY_MS ? 'last' : 'now', last, days: b ? b.days : 0 };
+    UI.openSheet(PhaseSheet.quitHtml(b ? b.snusPerDay : null, b ? b.vapePerDay : null), 'Passer en mode arrêt');
+  },
+
+  quitHtml(snus, vape) {
+    const st = UI.sheetState;
+    const lastLabel = st.last ? `${Dates.dayKey(st.last) === Dates.todayKey() ? 'aujourd’hui' : Dates.formatDayShort(st.last)} à ${Dates.formatTime(st.last)}` : '';
+    return `<h2 class="title" style="font-size:22px">Passer en mode arrêt</h2>
+      ${st.last && Date.now() - st.last < 3 * DAY_MS ? `<div class="stack"><span class="label">Le compteur part de</span>
+        <div class="segmented" role="group" aria-label="Début">
+          <button type="button" data-action="quit-from" data-value="last" aria-pressed="${st.from === 'last'}">Dernière prise</button>
+          <button type="button" data-action="quit-from" data-value="now" aria-pressed="${st.from === 'now'}">Maintenant</button>
+        </div><span class="small faint">${st.from === 'last' ? `Ta dernière prise : ${lastLabel}.` : 'À partir de cet instant.'}</span></div>` : ''}
+      <div class="stack"><span class="label">Ta référence</span>
+        <span class="small muted">${st.days
+          ? `Ta moyenne réelle sur ${st.days} jour${st.days > 1 ? 's' : ''} d'observation. Elle sert à calculer doses évitées et économies.`
+          : 'Pas encore de jour complet d’observation : indique ta consommation habituelle.'}</span>
+        ${PhaseSheet.baselineFields(snus, vape)}</div>
+      <div class="grid-2">
+        <button type="button" class="btn" data-action="close-sheet">Pas encore</button>
+        <button type="button" class="btn btn--primary" data-action="quit-confirm">Commencer</button>
+      </div>`;
+  },
+
+  openObservation() {
+    UI.sheetState = { kind: 'obs' };
+    UI.openSheet(`<h2 class="title" style="font-size:22px">Revenir en observation ?</h2>
+      <p class="muted small">Toutes tes données restent. Le compteur d'arrêt s'arrête ; tu pourras repasser en arrêt quand tu voudras, avec une nouvelle référence.</p>
+      <div class="grid-2"><button type="button" class="btn" data-action="close-sheet">Rester en arrêt</button>
+        <button type="button" class="btn btn--primary" data-action="obs-confirm">Revenir</button></div>`, 'Revenir en observation');
+  },
+
+  openBaseline() {
+    const b = Store.data.settings.baseline;
+    const real = Calc.baseline(Store.data.intakes, Store.data.settings.quitStart);
+    UI.sheetState = { kind: 'baseline' };
+    UI.openSheet(`<h2 class="title" style="font-size:22px">Référence</h2>
+      <p class="muted small">Prises par jour avant l'arrêt.${real ? ` Moyenne réelle mesurée : ${Util.formatNum(real.snusPerDay, 1)} snus et ${Util.formatNum(real.vapePerDay, 1)} vape (${real.days} j).` : ''}</p>
+      ${PhaseSheet.baselineFields(b ? b.snusPerDay : null, b ? b.vapePerDay : null)}
+      ${real ? '<button type="button" class="link link--mint" data-action="baseline-real" style="align-self:flex-start">Reprendre la moyenne mesurée</button>' : ''}
+      <div class="grid-2"><button type="button" class="btn" data-action="close-sheet">Annuler</button>
+        <button type="button" class="btn btn--primary" data-action="baseline-save">Enregistrer</button></div>`, 'Référence');
+  }
+};
+
+/* =========================================================================
    Actions — reliées aux éléments via data-action
    ========================================================================= */
 const Actions = {
@@ -1614,6 +2312,115 @@ const Actions = {
   /* ---- Stats ---- */
   'stats-range'(el) { App.statsRange = Number(el.dataset.value); App.render(); },
 
+  /* ---- Mode arrêt ---- */
+  'phase-ask'(el) {
+    const want = el.dataset.value, cur = Store.data.settings.phase;
+    if (want === cur) return;
+    if (want === 'arret') PhaseSheet.openQuit(); else PhaseSheet.openObservation();
+  },
+  'quit-from'(el) {
+    const snus = document.querySelector('[data-sheet="base-snus"]').value;
+    const vape = document.querySelector('[data-sheet="base-vape"]').value;
+    UI.sheetState.from = el.dataset.value;
+    UI.updateSheet(PhaseSheet.quitHtml(Util.parseNum(snus), Util.parseNum(vape)));
+  },
+  'quit-confirm'() {
+    const base = PhaseSheet.readBaseline();
+    if (!base) return;
+    const st = UI.sheetState;
+    const quitStart = st.from === 'last' && st.last ? st.last + 1 : Date.now();
+    UI.closeSheet();
+    Store.update((d) => {
+      d.settings.phase = 'arret';
+      d.settings.quitStart = quitStart;
+      d.settings.baseline = { ...base, days: st.days };
+      d.settings.reduction.on = false;
+    });
+    location.hash = '#/aujourdhui';
+    UI.toast('C’est parti. Une journée à la fois.');
+  },
+  'obs-confirm'() {
+    UI.closeSheet();
+    Store.update((d) => { d.settings.phase = 'observation'; d.settings.quitStart = null; });
+    UI.toast('Retour en observation. Tes données sont intactes.');
+  },
+  'baseline-edit'() { PhaseSheet.openBaseline(); },
+  'baseline-real'() {
+    const real = Calc.baseline(Store.data.intakes, Store.data.settings.quitStart);
+    document.querySelector('[data-sheet="base-snus"]').value = Util.formatNum(real.snusPerDay, 1);
+    document.querySelector('[data-sheet="base-vape"]').value = Util.formatNum(real.vapePerDay, 1);
+  },
+  'baseline-save'() {
+    const base = PhaseSheet.readBaseline();
+    if (!base) return;
+    UI.closeSheet();
+    Store.update((d) => { d.settings.baseline = { ...base, days: d.settings.baseline ? d.settings.baseline.days : 0 }; });
+  },
+
+  /* ---- Réduction progressive ---- */
+  'reduction-toggle'() {
+    const red = Store.data.settings.reduction;
+    if (red.on) { Store.update((d) => { d.settings.reduction.on = false; }); return; }
+    const avg = Calc.avgPerDay(Store.data.intakes, Dates.todayKey(), 7);
+    if (!avg) { UI.toast('Il faut au moins un jour complet d’observation pour fixer le point de départ.'); return; }
+    Store.update((d) => {
+      Object.assign(d.settings.reduction, { on: true, startDate: Dates.todayKey(), base: Math.round(avg.total * 10) / 10 });
+    });
+  },
+  'reduction-step'(el) { Store.update((d) => { d.settings.reduction.weeklyStep = Number(el.dataset.value); }); },
+
+  /* ---- Après une prise en phase arrêt ---- */
+  'relapse-type'(el) { App.relapseDraft.type = el.dataset.value; App.render(); },
+  'relapse-trigger'(el) {
+    const d = App.relapseDraft;
+    d.trigger = d.trigger === el.dataset.value ? null : el.dataset.value;
+    App.render();
+  },
+  'relapse-save'() {
+    const d = App.relapseDraft;
+    Intakes.add(d.type, Date.now(), d.trigger, d.intensity || null);
+    App.relapseDraft = null;
+    location.hash = '#/aujourdhui';
+    UI.toast('Noté. Le compteur repart, ton total reste.');
+  },
+  'relapse-observation'() {
+    const d = App.relapseDraft;
+    Intakes.add(d.type, Date.now(), d.trigger, d.intensity || null);
+    App.relapseDraft = null;
+    Store.data.settings.phase = 'observation';
+    Store.data.settings.quitStart = null;
+    Store.save();
+    location.hash = '#/aujourdhui';
+    UI.toast('Noté. Retour en observation, sans pression.');
+  },
+
+  /* ---- J'ai une envie ---- */
+  'craving-close'() { Craving.current = null; location.hash = '#/aujourdhui'; },
+  'craving-pause'() { Craving.togglePause(); App.render(); },
+  'craving-done'() { Craving.finish(); App.render(); },
+  'craving-trigger'(el) {
+    const c = Craving.state();
+    c.trigger = c.trigger === el.dataset.value ? null : el.dataset.value;
+    App.render();
+  },
+  'craving-intensity'(el) {
+    const c = Craving.state(), n = Number(el.dataset.value);
+    c.intensity = c.intensity === n ? null : n;
+    App.render();
+  },
+  'craving-save'() { Craving.save(true); location.hash = '#/aujourdhui'; UI.toast('Envie notée. Bien joué.'); },
+  'craving-skip'() { Craving.save(true, false); location.hash = '#/aujourdhui'; },
+  'craving-gave-in'() {
+    const ctx = Craving.save(false);
+    if (Store.data.settings.phase === 'arret') {
+      App.relapseDraft = { type: 'snus', trigger: ctx.trigger, intensity: ctx.intensity };
+      location.hash = '#/reprendre';
+    } else {
+      App.afterRoute = () => IntakeSheet.open({ mode: 'new', id: null, type: 'snus', ts: Date.now(), trigger: ctx.trigger, intensity: ctx.intensity, confirmDelete: false });
+      location.hash = '#/aujourdhui';
+    }
+  },
+
   /* ---- Check-in ---- */
   'ci-pick'(el) {
     App.checkinDraft[el.dataset.key] = Number(el.dataset.value);
@@ -1642,14 +2449,16 @@ const Actions = {
   'demo-ask'() {
     UI.openSheet(`
       <h2 class="title" style="font-size:22px">Charger des données de démo ?</h2>
-      <p class="muted small">Trois semaines d'observation fictives, avec prix et check-ins. Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées ; tu pourras annuler juste après. Pense à exporter avant si tu veux les garder.</p>
-      <div class="grid-2">
-        <button type="button" class="btn" data-action="close-sheet">Non</button>
-        <button type="button" class="btn btn--primary" data-action="demo-load">Charger</button>
+      <p class="muted small">Données fictives avec prix et check-ins. Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées ; tu pourras annuler juste après. Pense à exporter avant si tu veux les garder.</p>
+      <div class="stack">
+        <button type="button" class="btn btn--primary btn--block" data-action="demo-load" data-kind="observation">Observation · 3 semaines</button>
+        <button type="button" class="btn btn--block" data-action="demo-load" data-kind="arret">Arrêt en cours · jour 7</button>
+        <button type="button" class="link" data-action="close-sheet" style="align-self:center">Annuler</button>
       </div>`, 'Données de démo');
   },
-  'demo-load'() {
-    Backup.pending = Demo.generate(Date.now(), Math.floor(Math.random() * 1e9));
+  'demo-load'(el) {
+    const seed = Math.floor(Math.random() * 1e9);
+    Backup.pending = el.dataset.kind === 'arret' ? Demo.generateQuit(Date.now(), seed) : Demo.generate(Date.now(), seed);
     Backup.applyPending('Données de démo chargées.');
   }
 };
@@ -1726,7 +2535,7 @@ const Backup = {
    App — routage par #hash et rendu
    ========================================================================= */
 const App = {
-  routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie'],
+  routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie', 'reprendre'],
   testMode: false,
   /** Check-in en cours de saisie (non enregistré). */
   checkinDraft: null,
@@ -1737,11 +2546,36 @@ const App = {
   /** Dernier jour local vu : sert à détecter minuit ou un changement de fuseau. */
   lastDayKey: null,
   /** Écrans sans barre d'onglets ni bouton flottant. */
-  focused: ['envie'],
+  focused: ['envie', 'reprendre'],
+  /** Action à lancer après le prochain changement d'écran. */
+  afterRoute: null,
+  /** Brouillon de l'écran « Reprendre ». */
+  relapseDraft: null,
 
   route() {
     const name = location.hash.replace(/^#\/?/, '');
     return App.routes.includes(name) ? name : 'aujourdhui';
+  },
+
+  /**
+   * Mise à jour chaque seconde des valeurs « en direct » sans redessiner
+   * l'écran (évite de casser l'animation de respiration ou un champ en cours).
+   */
+  tick() {
+    const name = App.route();
+    const set = (key, text) => { const el = document.querySelector(`[data-live="${key}"]`); if (el && el.textContent !== text) el.textContent = text; };
+    if (name === 'aujourdhui' && Store.data.settings.phase === 'arret') {
+      const cur = Calc.streaks(Store.data.intakes, Store.data.settings.quitStart, Date.now()).current;
+      set('since-big', Screens.sinceBig(cur));
+      set('since-small', Screens.sinceSmall(cur));
+    }
+    if (name === 'envie' && Craving.current && Craving.current.step === 'timer') {
+      const c = Craving.current, el = Craving.elapsed(c), v = Craving.view(el, c);
+      if (el >= Craving.DURATION) { Craving.finish(); App.render(); return; }
+      set('craving-phase', v.phase); set('craving-hint', v.hint); set('craving-left', v.left);
+      const ring = document.querySelector('[data-live="craving-ring"]');
+      if (ring) ring.setAttribute('stroke-dashoffset', v.dash);
+    }
   },
 
   /** Redessine si le jour local a changé (minuit, fuseau, retour dans l'app). */
@@ -1806,9 +2640,18 @@ const App = {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     document.addEventListener('click', App.onClick);
     document.addEventListener('change', App.onChange);
-    window.addEventListener('hashchange', () => { App.viewDay = null; App.render(); document.getElementById('view').scrollTop = 0; });
+    window.addEventListener('hashchange', () => {
+      App.viewDay = null;
+      if (App.route() !== 'envie' && Craving.current && Craving.current.step === 'log') Craving.current = null;
+      if (App.route() !== 'reprendre') App.relapseDraft = null;
+      UI.closeSheet();
+      App.render();
+      document.getElementById('view').scrollTop = 0;
+      if (App.afterRoute) { const fn = App.afterRoute; App.afterRoute = null; fn(); }
+    });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) App.checkDayChange(); });
     setInterval(App.checkDayChange, 30000);
+    setInterval(App.tick, 1000);
     if (new URLSearchParams(location.search).has('test')) { App.testMode = true; Tests.run(); return; }
     App.render();
   }
@@ -2064,6 +2907,125 @@ Tests.add('corrélation : consommation constante = pas de comparaison', () => {
     checkins.push({ date: key, sleep: 3, energy: 3, mood: 3, anxiety: 3 });
   }
   Tests.eq(Calc.correlation(intakes, checkins).flat, true);
+});
+
+/* ---- Étape 5 : phase arrêt ---- */
+/** Scénario de référence : 4 snus et 5 vape par jour, arrêt le 1er octobre à 10 h. */
+Tests.quitFixture = () => {
+  const s = Object.assign(Store.defaults().settings, {
+    phase: 'arret', snusBoxPrice: 6.9, snusPerBox: 20, vapeUnitPrice: 3.5, vapeSessionsPerUnit: 40,
+    quitStart: new Date(2026, 9, 1, 10, 0).getTime(), baseline: { snusPerDay: 4, vapePerDay: 5, days: 14 }
+  });
+  // Une seule prise : une vape 2 jours après l'arrêt.
+  const intakes = [{ id: 'r', type: 'vape', ts: s.quitStart + 2 * DAY_MS }];
+  return { s, intakes, now: s.quitStart + 3.5 * DAY_MS };
+};
+Tests.add('référence = moyenne réelle des jours complets avant l’arrêt', () => {
+  const t = (d, h) => new Date(2026, 8, d, h).getTime();
+  const intakes = [
+    { type: 'snus', ts: t(1, 9) }, { type: 'snus', ts: t(1, 15) }, { type: 'vape', ts: t(1, 20) },
+    { type: 'vape', ts: t(2, 9) },
+    { type: 'snus', ts: t(4, 8) } // jour de l'arrêt : exclu
+  ];
+  const b = Calc.baseline(intakes, t(4, 12));
+  Tests.eq(b.days, 3); // 1, 2 et 3 septembre (le 3 sans prise compte)
+  Tests.near(b.snusPerDay, 2 / 3);
+  Tests.near(b.vapePerDay, 2 / 3);
+  Tests.eq(Calc.baseline(intakes.slice(4), t(4, 12)), null);
+});
+Tests.add('doses évitées et économies, snus et vape séparés', () => {
+  const { s, intakes, now } = Tests.quitFixture();
+  const a = Calc.avoided(intakes, s, now);
+  Tests.eq(a.snus.avoided, 14);          // 4 × 3,5 j
+  Tests.eq(a.vape.avoided, 16);          // 5 × 3,5 − 1 prise = 16,5 → 16
+  Tests.near(a.snus.money, 14 * 0.345);  // 4,83 €
+  Tests.near(a.vape.money, 16 * 0.0875); // 1,40 €
+  Tests.near(a.money, 6.23);
+  Tests.near(a.vape.units, 0.4);
+});
+Tests.add('économies : prix à zéro et jamais négatif', () => {
+  const { s, intakes, now } = Tests.quitFixture();
+  s.vapeUnitPrice = 0;
+  const a = Calc.avoided(intakes, s, now);
+  Tests.eq(a.vape.money, null);
+  Tests.eq(a.missing, ['vape']);
+  Tests.near(a.money, 4.83);
+  s.snusBoxPrice = 0;
+  Tests.eq(Calc.avoided(intakes, s, now).money, null);
+  const many = [...Array(30)].map((_, i) => ({ type: 'snus', ts: s.quitStart + i * 60000 }));
+  Tests.eq(Calc.avoided(many, s, now).snus.avoided, 0);
+  s.baseline = null;
+  Tests.eq(Calc.avoided(intakes, s, now).snus.avoided, 0);
+});
+Tests.add('enchaînements : en cours et meilleur, sans remise à zéro', () => {
+  const { s, intakes, now } = Tests.quitFixture();
+  const st = Calc.streaks(intakes, s.quitStart, now);
+  Tests.near(st.current / DAY_MS, 1.5);
+  Tests.near(st.best / DAY_MS, 2);
+  Tests.eq(st.lastTs, intakes[0].ts);
+  Tests.near(Calc.streaks([], s.quitStart, now).current / DAY_MS, 3.5);
+});
+Tests.add('jours sans nicotine au total (jours locaux, aujourd’hui exclu)', () => {
+  const { s, intakes, now } = Tests.quitFixture();
+  // Arrêt le 1er à 10 h, prise le 3, maintenant le 4 à 22 h : 1er et 2 sans nicotine.
+  Tests.eq(Calc.cleanDays(intakes, s.quitStart, now), 2);
+  Tests.eq(Calc.cleanDays([], s.quitStart, s.quitStart + 3600000), 0);
+});
+Tests.add('économies cumulées : une valeur par jour, croissante', () => {
+  const { s, now } = Tests.quitFixture();
+  const series = Calc.savingsSeries([], s, now);
+  Tests.eq(series.length, 4);
+  Tests.eq(series.every((p, i) => i === 0 || p.value >= series[i - 1].value), true);
+  Tests.near(series[3].value, Calc.avoided([], s, now).money);
+});
+Tests.add('réduction progressive : cible qui baisse chaque semaine', () => {
+  const red = { on: true, base: 10, weeklyStep: 1, startDate: '2026-10-01' };
+  Tests.eq(Calc.reductionTarget(red, '2026-09-30'), null);
+  Tests.eq(Calc.reductionTarget(red, '2026-10-01'), 10);
+  Tests.eq(Calc.reductionTarget(red, '2026-10-07'), 10);
+  Tests.eq(Calc.reductionTarget(red, '2026-10-08'), 9);
+  Tests.eq(Calc.reductionTarget({ ...red, weeklyStep: 2 }, '2027-03-01'), 0);
+  Tests.eq(Calc.reductionTarget({ ...red, on: false }, '2026-10-08'), null);
+  const t = (d, h) => new Date(2026, 9, d, h).getTime();
+  const intakes = [...Array(11)].map((_, i) => ({ type: 'snus', ts: t(1, 8) + i * 60000 }))
+    .concat([...Array(9)].map((_, i) => ({ type: 'vape', ts: t(2, 8) + i * 60000 })));
+  const days = Calc.reductionDays(intakes, red, '2026-10-03', 7);
+  Tests.eq(days.map((d) => d.ok), [false, true]);
+});
+Tests.add('messages du jour : au moins 40, stables, sans vocabulaire d’échec', () => {
+  Tests.eq(Messages.count() >= 40, true);
+  Tests.eq(Messages.forDay('2026-10-07', 'peak'), Messages.forDay('2026-10-07', 'peak'));
+  const all = Object.values(Messages.pools).flat().join(' ').toLowerCase();
+  ['échec', 'rechute', 'craqu', 'faible', 'honte', 'faute'].forEach((w) => Tests.eq(all.includes(w), false, w));
+  Tests.eq(Calc.stage(10 * 3600000), 'start');
+  Tests.eq(Calc.stage(50 * 3600000), 'peak');
+  Tests.eq(Calc.stage(10 * DAY_MS), 'weeks');
+});
+Tests.add('prochain jalon et progression', () => {
+  const m = Calc.nextMilestone(3.6 * DAY_MS);
+  Tests.eq(m.title, '1 semaine');
+  Tests.near(m.progress, (86.4 - 72) / (168 - 72));
+  Tests.eq(Calc.nextMilestone(400 * DAY_MS), null);
+});
+Tests.add('minuteur d’envie : respiration 4 s / 6 s, pause, durée plafonnée', () => {
+  const c = { start: 1000000, pausedAt: null, pausedMs: 0 };
+  Tests.eq(Craving.view(0, c).phase, 'Inspire');
+  Tests.eq(Craving.view(5000, c).phase, 'Expire');
+  Tests.eq(Craving.view(12000, c).phase, 'Inspire');
+  Tests.eq(Craving.view(0, c).left, '10:00');
+  Tests.eq(Craving.view(78000, c).left, '08:42');
+  Tests.near(Number(Craving.view(300000, c).dash), Craving.CIRC / 2, '', 0.1);
+  Tests.eq(Craving.elapsed(c, 1000000 + 20 * 60000), Craving.DURATION);
+  Tests.eq(Craving.elapsed({ ...c, pausedAt: 1060000 }, 1900000), 60000);
+});
+Tests.add('démo arrêt : référence calculée, une prise, envies', () => {
+  const now = new Date(2026, 9, 7, 15, 0).getTime();
+  const d = Demo.generateQuit(now, 3);
+  Tests.eq(d.settings.phase, 'arret');
+  Tests.eq(d.settings.baseline !== null && d.settings.baseline.days >= 13, true);
+  Tests.eq(Calc.quitIntakes(d.intakes, d.settings.quitStart).length, 1);
+  Tests.eq(d.cravings.length > 10, true);
+  Tests.eq(d.cravings.every((c) => c.ts <= now), true);
 });
 
 App.boot();
