@@ -285,6 +285,25 @@ body.no-chrome .tabbar, body.no-chrome .fab { display: none; }
 .dots span.on { background: var(--warm); }
 input[type="datetime-local"] { width: 100%; border: 0; outline: none; background: transparent; font-family: var(--font-num); font-size: 16px; min-height: 44px; }
 
+/* Graphes SVG */
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--font-text); }
+.c-data { fill: var(--data); }
+.c-data-hi { fill: var(--data-hi); }
+.c-data-muted { fill: var(--line-2); }
+.c-warm { fill: var(--warm-soft); }
+.c-warm-hi { fill: var(--warm); }
+.c-mint { fill: var(--mint); }
+.c-empty { fill: var(--line); }
+.c-track { fill: var(--surface-2); }
+.c-avg { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 4 4; }
+.c-label { font-size: 11px; fill: var(--text-3); }
+.c-label-hi { fill: var(--text); }
+.c-row-label { font-size: 13px; fill: var(--text); }
+.c-row-pct { font-size: 13px; fill: var(--text-2); font-family: var(--font-num) !important; }
+.ghost-chart rect { fill: transparent; stroke: var(--line); stroke-dasharray: 4 3; }
+.ghost-chart rect.c-data-hi { fill: var(--data); stroke: none; }
+
 /* =========================================================================
    6. Feuille du bas, toast
    ========================================================================= */
@@ -400,8 +419,8 @@ const Util = {
   formatNum(n, maxDigits = 2) {
     return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: maxDigits }).format(n);
   },
-  formatMoney(n) {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
+  formatMoney(n, digits = 2) {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
   },
   uid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -684,6 +703,182 @@ const Calc = {
   }
 };
 
+/* ---- Calc : statistiques ---- */
+Object.assign(Calc, {
+  /** Nombre de prises par heure locale (0 à 23). */
+  hourHistogram(list) {
+    const hours = new Array(24).fill(0);
+    list.forEach((x) => { hours[new Date(x.ts).getHours()] += 1; });
+    return hours;
+  },
+
+  /** Les n heures les plus chargées, dans l'ordre de la journée. */
+  topHours(hist, n = 2) {
+    return hist.map((v, h) => ({ v, h })).filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v || a.h - b.h).slice(0, n).map((x) => x.h).sort((a, b) => a - b);
+  },
+
+  /** Part de chaque déclencheur (« Sans contexte » à la fin). */
+  triggerShare(list) {
+    if (!list.length) return [];
+    const counts = {};
+    list.forEach((x) => { const k = x.trigger || 'none'; counts[k] = (counts[k] || 0) + 1; });
+    const rows = TRIGGERS.filter(([k]) => counts[k]).map(([k, label]) => ({ key: k, label, count: counts[k] }))
+      .sort((a, b) => b.count - a.count);
+    if (counts.none) rows.push({ key: 'none', label: 'Sans contexte', count: counts.none });
+    return rows.map((r) => ({ ...r, pct: (r.count / list.length) * 100 }));
+  },
+
+  /**
+   * Coût d'une prise : une portion de snus, une session de vape.
+   * null quand le prix ou le contenu n'est pas renseigné (évite « 0 € » trompeur).
+   */
+  unitCosts(s) {
+    const per = (price, qty) => (price > 0 && qty > 0 ? price / qty : null);
+    return { snus: per(s.snusBoxPrice, s.snusPerBox), vape: per(s.vapeUnitPrice, s.vapeSessionsPerUnit) };
+  },
+
+  /** Dépense pour une liste de prises ; `missing` liste les types sans prix. */
+  spend(list, settings) {
+    const cost = Calc.unitCosts(settings);
+    const c = Calc.countByType(list);
+    const missing = ['snus', 'vape'].filter((t) => c[t] > 0 && cost[t] === null);
+    const part = (t) => (cost[t] === null ? 0 : c[t] * cost[t]);
+    return { snus: part('snus'), vape: part('vape'), total: part('snus') + part('vape'), missing };
+  },
+
+  /** Lundi de la semaine de la clé donnée. */
+  weekStart(key) {
+    const dow = (new Date(Dates.keyToStart(key)).getDay() + 6) % 7; // lundi = 0
+    return Dates.addDays(key, -dow);
+  },
+  monthStart(key) { return key.slice(0, 8) + '01'; },
+
+  /** Prises dont le jour local est entre deux clés incluses. */
+  between(list, fromKey, toKey) {
+    return list.filter((x) => { const k = Dates.dayKey(x.ts); return k >= fromKey && k <= toKey; });
+  },
+
+  /** Nicotine contenue dans les portions de snus (pas la quantité absorbée). */
+  snusMg(snusCount, settings) { return snusCount * (settings.snusMg || 0); }
+});
+
+/* =========================================================================
+   Charts — graphes SVG maison (viewBox fixe, largeur fluide)
+   ========================================================================= */
+const Charts = {
+  W: 342,
+
+  /**
+   * Barres verticales. items : [{ v, label, hi }]
+   * options : height, avg (ligne pointillée), gap, tone ('data' | 'warm')
+   */
+  bars(items, opts = {}) {
+    const W = Charts.W, H = opts.height || 150, labelH = 20, chartH = H - labelH;
+    const n = items.length;
+    const gap = opts.gap ?? (n > 14 ? 3 : 12);
+    const bw = (W - gap * (n - 1)) / n;
+    const top = Math.max(1, opts.avg || 0, ...items.map((i) => i.v)) * 1.12;
+    const y = (v) => chartH - (v / top) * chartH;
+    const tone = opts.tone || 'data';
+    const rects = items.map((it, i) => {
+      const x = i * (bw + gap);
+      const h = it.v > 0 ? Math.max(3, chartH - y(it.v)) : 2;
+      const cls = it.v > 0 ? `c-${tone}${it.hi ? '-hi' : ''}` : 'c-empty';
+      const r = Math.min(6, bw / 2);
+      return `<rect class="${cls}" x="${x.toFixed(1)}" y="${(chartH - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${r.toFixed(1)}"/>
+        ${it.label ? `<text class="c-label${it.hi ? ' c-label-hi' : ''}" x="${(x + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${Util.esc(it.label)}</text>` : ''}`;
+    }).join('');
+    const avg = opts.avg ? `<line class="c-avg" x1="0" x2="${W}" y1="${y(opts.avg).toFixed(1)}" y2="${y(opts.avg).toFixed(1)}"/>` : '';
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${Util.esc(opts.aria || '')}">${rects}${avg}</svg>`;
+  },
+
+  /** Barres horizontales (déclencheurs). rows : [{ label, pct, muted }] */
+  hbars(rows) {
+    const W = Charts.W, rowH = 34, labelW = 104, pctW = 44, trackW = W - labelW - pctW - 8;
+    const max = Math.max(...rows.map((r) => r.pct), 1);
+    const body = rows.map((r, i) => {
+      const yy = i * rowH;
+      const w = Math.max(4, (r.pct / max) * trackW);
+      return `<text class="c-row-label" x="0" y="${yy + 21}">${Util.esc(r.label)}</text>
+        <rect class="c-track" x="${labelW}" y="${yy + 12}" width="${trackW}" height="8" rx="4"/>
+        <rect class="${r.muted ? 'c-data-muted' : 'c-data'}" x="${labelW}" y="${yy + 12}" width="${w.toFixed(1)}" height="8" rx="4"/>
+        <text class="c-row-pct" x="${W}" y="${yy + 21}" text-anchor="end">${Math.round(r.pct)} %</text>`;
+    }).join('');
+    const aria = rows.map((r) => `${r.label} ${Math.round(r.pct)} %`).join(', ');
+    return `<svg class="chart" viewBox="0 0 ${W} ${rows.length * rowH}" role="img" aria-label="${Util.esc(aria)}">${body}</svg>`;
+  }
+};
+
+/* =========================================================================
+   Demo — jeu de données fictif, reproductible (graine fixe)
+   ========================================================================= */
+const Demo = {
+  /** Générateur pseudo-aléatoire déterministe (mulberry32). */
+  rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  },
+
+  /** Heures typiques et déclencheur associé. */
+  SLOTS: [
+    { h: 7, w: 3, trig: 'reveil' }, { h: 9, w: 4, trig: 'cafe' }, { h: 10, w: 2, trig: 'ennui' },
+    { h: 13, w: 4, trig: 'repas' }, { h: 15, w: 2, trig: 'stress' }, { h: 16, w: 4, trig: 'stress' },
+    { h: 17, w: 2, trig: 'ennui' }, { h: 20, w: 3, trig: 'repas' }, { h: 21, w: 3, trig: 'soiree' }, { h: 23, w: 1, trig: 'soiree' }
+  ],
+
+  pickSlot(rand) {
+    const total = Demo.SLOTS.reduce((a, s) => a + s.w, 0);
+    let r = rand() * total;
+    return Demo.SLOTS.find((s) => (r -= s.w) < 0) || Demo.SLOTS[0];
+  },
+
+  /** 21 jours d'observation se terminant maintenant, avec check-ins. */
+  generate(now = Date.now(), seed = 42) {
+    const rand = Demo.rng(seed);
+    const data = Store.defaults();
+    Object.assign(data.settings, {
+      snusBoxPrice: 6.9, snusPerBox: 20, snusMg: 8,
+      vapeFormat: 'capsule', vapeUnitPrice: 3.5, vapeSessionsPerUnit: 40,
+      theme: Store.data ? Store.data.settings.theme : 'dark'
+    });
+    const today = Dates.dayKey(now);
+    for (let back = 20; back >= 0; back--) {
+      const key = Dates.addDays(today, -back);
+      const start = Dates.keyToStart(key);
+      const count = 6 + Math.floor(rand() * 5);
+      let dayTotal = 0;
+      for (let i = 0; i < count; i++) {
+        const slot = Demo.pickSlot(rand);
+        const ts = start + slot.h * 3600000 + Math.floor(rand() * 3600000);
+        if (ts > now) continue;
+        const withContext = rand() > 0.15;
+        data.intakes.push({
+          id: `demo-${back}-${i}`, type: rand() < 0.45 ? 'snus' : 'vape', ts,
+          trigger: withContext ? slot.trig : null,
+          intensity: withContext ? 1 + Math.floor(rand() * 5) : null
+        });
+        dayTotal += 1;
+      }
+      if (back >= 1 && back <= 14) data.checkins.push(Demo.checkin(key, dayTotal, rand));
+    }
+    return Store.normalize(data);
+  },
+
+  /** Check-in fictif : un peu moins bon les jours chargés. */
+  checkin(key, dayTotal, rand) {
+    const base = dayTotal >= 9 ? 2 : 3;
+    const v = (b) => Math.min(5, Math.max(1, b + Math.round(rand() * 2 - 0.5)));
+    return { date: key, sleep: v(base), energy: v(base), mood: v(base + 1), anxiety: v(dayTotal >= 9 ? 4 : 2), hr: 58 + Math.floor(rand() * 12) };
+  }
+};
+
 /* =========================================================================
    Intakes — ajout, modification, suppression des prises
    ========================================================================= */
@@ -861,7 +1056,132 @@ const Screens = {
     </div>`;
   },
 
-  stats() { return Screens.placeholder('Stats', 3); },
+  /** Stats — phase observation. */
+  stats() {
+    const intakes = Store.data.intakes;
+    if (!intakes.length) return Screens.statsEmpty();
+    const n = App.statsRange;
+    const today = Dates.todayKey();
+    const from = Dates.addDays(today, -(n - 1));
+    const inRange = Calc.between(intakes, from, today);
+    const avg = Calc.avgPerDay(intakes, today, n);
+    const daysKnown = Dates.diffDays(Dates.dayKey(intakes[0].ts), today);
+    return `<div class="screen">
+      <header class="header">
+        <h1 class="title">Stats</h1>
+        <div class="segmented" role="group" aria-label="Période" style="width:132px">
+          <button type="button" data-action="stats-range" data-value="7" aria-pressed="${n === 7}">7 j</button>
+          <button type="button" data-action="stats-range" data-value="30" aria-pressed="${n === 30}">30 j</button>
+        </div>
+      </header>
+      ${daysKnown < 3 ? `<p class="small muted">Encore ${3 - daysKnown} jour${3 - daysKnown > 1 ? 's' : ''} de relevés pour des moyennes parlantes.</p>` : ''}
+      ${Screens.statsDaily(intakes, from, today, n, avg)}
+      ${Screens.statsHours(inRange)}
+      ${Screens.statsTriggers(inRange)}
+      ${Screens.statsSpend(intakes, today)}
+      ${Screens.statsNicotine(avg, inRange)}
+    </div>`;
+  },
+
+  statsDaily(intakes, from, today, n, avg) {
+    const days = Calc.dailyCounts(intakes, from, today);
+    const items = days.map((d, i) => {
+      const isToday = d.key === today;
+      let label = '';
+      if (n === 7) label = isToday ? 'Auj.' : new Date(Dates.keyToStart(d.key)).toLocaleDateString('fr-FR', { weekday: 'narrow' });
+      else if ((n - 1 - i) % 7 === 0) label = isToday ? 'Auj.' : String(Number(d.key.slice(8)));
+      return { v: d.total, label, hi: isToday };
+    });
+    const prev = Calc.avgPerDay(intakes, Dates.addDays(today, -n), n);
+    const firstKey = Dates.dayKey(intakes[0].ts);
+    const comparable = avg && prev && Dates.diffDays(firstKey, Dates.addDays(today, -2 * n)) >= 0;
+    const delta = comparable ? avg.total - prev.total : null;
+    return `<section class="card" style="gap:16px">
+      <div class="row" style="align-items:flex-end">
+        <div class="stack" style="gap:4px">
+          <span class="small muted">Prises par jour</span>
+          <span class="value">${avg ? Util.formatNum(avg.total, 1) : '—'} <span class="small muted" style="font-family:var(--font-text);font-weight:500">${avg ? `moyenne ${avg.days} j` : 'pas encore de jour complet'}</span></span>
+        </div>
+        ${delta !== null ? `<span class="small muted">${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Util.formatNum(Math.abs(delta), 1)} vs ${n} j précédents</span>` : ''}
+      </div>
+      ${Charts.bars(items, { avg: avg ? avg.total : null, aria: `Prises par jour sur ${n} jours` })}
+      ${avg ? `<p class="tiny faint">${Util.formatNum(avg.snus, 1)} snus et ${Util.formatNum(avg.vape, 1)} vape par jour en moyenne. La ligne pointillée montre la moyenne ; aujourd'hui (en clair) n'est pas fini.</p>` : ''}
+    </section>`;
+  },
+
+  statsHours(list) {
+    const hist = Calc.hourHistogram(list);
+    const peaks = Calc.topHours(hist, 2);
+    const items = hist.map((v, h) => ({ v, label: [0, 6, 12, 18, 23].includes(h) ? `${h} h` : '' }));
+    return `<section class="card" style="gap:14px">
+      <div class="row"><span class="small muted">Répartition par heure</span>
+        ${peaks.length ? `<span class="small">Pic : ${peaks.map((h) => `${h} h`).join(' et ')}</span>` : ''}</div>
+      ${Charts.bars(items, { height: 110, gap: 3, aria: 'Prises par heure de la journée' })}
+    </section>`;
+  },
+
+  statsTriggers(list) {
+    const rows = Calc.triggerShare(list).map((r) => ({ label: r.label, pct: r.pct, muted: r.key === 'none' }));
+    return `<section class="card" style="gap:14px">
+      <span class="small muted">Par déclencheur</span>
+      ${rows.length ? Charts.hbars(rows) : '<p class="small faint">Aucune prise sur la période.</p>'}
+    </section>`;
+  },
+
+  statsSpend(intakes, today) {
+    const s = Store.data.settings;
+    const week = Calc.spend(Calc.between(intakes, Calc.weekStart(today), today), s);
+    const month = Calc.spend(Calc.between(intakes, Calc.monthStart(today), today), s);
+    const avg30 = Calc.avgPerDay(intakes, today, 30);
+    const cost = Calc.unitCosts(s);
+    const yearly = avg30 && (cost.snus !== null || cost.vape !== null)
+      ? ((avg30.snus * (cost.snus || 0)) + (avg30.vape * (cost.vape || 0))) * 365 : null;
+    const missing = [...new Set([...week.missing, ...month.missing])];
+    const tile = (title, sp, sub) => `<div class="card" style="padding:18px;gap:6px">
+        <span class="small muted">${title}</span>
+        <span class="value" style="font-size:28px">${sp.total > 0 || !sp.missing.length ? Util.formatMoney(sp.total) : '—'}</span>
+        <span class="tiny faint">${sub}</span></div>`;
+    return `<section class="stack" style="gap:12px">
+      <div class="grid-2">
+        ${tile('Cette semaine', week, `snus ${Util.formatNum(week.snus)} € · vape ${Util.formatNum(week.vape)} €`)}
+        ${tile('Ce mois', month, yearly !== null ? `≈ ${Util.formatMoney(yearly, 0)} sur un an` : 'depuis le 1er')}
+      </div>
+      ${missing.length ? `<p class="small muted">Prix ${missing.map((t) => (t === 'snus' ? 'du snus' : 'de la vape')).join(' et ')} non renseigné : ces prises ne sont pas comptées.
+        <a class="link link--mint" href="#/reglages" style="min-height:44px">Renseigner</a></p>` : ''}
+    </section>`;
+  },
+
+  statsNicotine(avg, list) {
+    const s = Store.data.settings;
+    if (!(s.snusMg > 0)) return '';
+    const snusInRange = list.filter((x) => x.type === 'snus').length;
+    if (!snusInRange && !(avg && avg.snus > 0)) return '';
+    return `<section class="card" style="gap:6px">
+      <span class="small muted">Nicotine du snus (estimation)</span>
+      <span class="value">${avg ? `≈ ${Util.formatNum(Calc.snusMg(avg.snus, s), 0)} mg` : '—'} <span class="small muted" style="font-family:var(--font-text);font-weight:500">par jour</span></span>
+      <p class="tiny faint">Portions × ${Util.formatNum(s.snusMg)} mg. C'est la teneur des portions : le corps n'en absorbe qu'une partie. La vape n'est pas estimée, trop variable d'une bouffée à l'autre.</p>
+    </section>`;
+  },
+
+  statsEmpty() {
+    const ghost = [40, 60, 50, 75, 55, 45, 30].map((h, i) => ({ v: h, hi: i === 6 }));
+    return `<div class="screen">
+      <header class="header"><h1 class="title">Stats</h1></header>
+      <section class="card card--empty" style="gap:18px">
+        <div class="ghost-chart">${Charts.bars(ghost, { height: 120, aria: 'Exemple de graphe' })}</div>
+        <div class="stack" style="gap:8px">
+          <strong>Les graphes se dessinent avec le temps.</strong>
+          <span class="small muted">Après 3 jours de relevés, tu verras tes moyennes, tes heures et tes déclencheurs. Pas besoin d'être précis : un tap par prise suffit.</span>
+        </div>
+      </section>
+      <section class="card">
+        <span class="small muted">Pour estimer tes dépenses</span>
+        <span>Indique le prix d'une boîte de snus et d'une capsule de vape.</span>
+        <a class="link link--mint" href="#/reglages" style="align-self:flex-start">Ouvrir les réglages</a>
+      </section>
+      <button type="button" class="btn btn--dashed" data-action="demo-ask">Essayer avec des données de démo</button>
+    </div>`;
+  },
   corps() { return Screens.placeholder('Corps', 6); },
   checkin() { return Screens.placeholder('Ce soir', 4); },
   envie() {
@@ -915,6 +1235,7 @@ const Screens = {
           <button type="button" class="btn btn--surface" data-action="export">Exporter</button>
           <button type="button" class="btn btn--surface" data-action="import">Importer</button>
         </div>
+        <button type="button" class="btn btn--dashed" data-action="demo-ask">Charger des données de démo</button>
         <p class="tiny faint">${Screens.backupHint(s.lastExportAt, n)}</p>
         <p class="tiny faint">Tout reste sur ce téléphone. iOS peut effacer les données d'une web app peu utilisée : exporte de temps en temps.</p>
       </section>
@@ -1142,7 +1463,25 @@ const Actions = {
 
   export() { Backup.exportFile(); },
   import() { document.getElementById('import-input').click(); },
-  'confirm-import'() { Backup.applyPending(); }
+  'confirm-import'() { Backup.applyPending(); },
+
+  /* ---- Stats ---- */
+  'stats-range'(el) { App.statsRange = Number(el.dataset.value); App.render(); },
+
+  /* ---- Démo ---- */
+  'demo-ask'() {
+    UI.openSheet(`
+      <h2 class="title" style="font-size:22px">Charger des données de démo ?</h2>
+      <p class="muted small">Trois semaines d'observation fictives, avec prix et check-ins. Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées ; tu pourras annuler juste après. Pense à exporter avant si tu veux les garder.</p>
+      <div class="grid-2">
+        <button type="button" class="btn" data-action="close-sheet">Non</button>
+        <button type="button" class="btn btn--primary" data-action="demo-load">Charger</button>
+      </div>`, 'Données de démo');
+  },
+  'demo-load'() {
+    Backup.pending = Demo.generate(Date.now(), Math.floor(Math.random() * 1e9));
+    Backup.applyPending('Données de démo chargées.');
+  }
 };
 
 /* =========================================================================
@@ -1198,14 +1537,14 @@ const Backup = {
     reader.readAsText(file);
   },
 
-  applyPending() {
+  applyPending(message = 'Données importées.') {
     if (!Backup.pending) return;
     Store.replaceAll(Backup.pending);
     Backup.pending = null;
     UI.closeSheet();
     UI.applyTheme();
     App.render();
-    UI.toast('Données importées.', 'Annuler', () => {
+    UI.toast(message, 'Annuler', () => {
       if (Store.restoreBackup()) { UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
     }, 8000);
   }
@@ -1217,6 +1556,8 @@ const Backup = {
 const App = {
   routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie'],
   testMode: false,
+  /** Période des stats : 7 ou 30 jours. */
+  statsRange: 7,
   /** Jour affiché sur « Aujourd'hui » (null = aujourd'hui). */
   viewDay: null,
   /** Dernier jour local vu : sert à détecter minuit ou un changement de fuseau. */
@@ -1239,9 +1580,13 @@ const App = {
   },
 
   render() {
+    const view = document.getElementById('view');
+    // Valide d'abord un champ en cours de saisie : son « change » (au blur)
+    // déclencherait sinon un rendu imbriqué pendant le remplacement du HTML.
+    const active = document.activeElement;
+    if (active && view.contains(active)) active.blur();
     App.lastDayKey = Dates.todayKey();
     const name = App.route();
-    const view = document.getElementById('view');
     view.innerHTML = Screens[name]();
     document.body.classList.toggle('no-chrome', App.focused.includes(name));
     document.querySelectorAll('.tab').forEach((t) => {
@@ -1435,6 +1780,67 @@ Tests.add('une heure dans le futur est refusée', () => {
   Tests.eq(Intakes.isValidTs(Date.now() + 3600000), false);
   Tests.eq(Intakes.isValidTs(Date.now() - 60000), true);
   Tests.eq(Intakes.isValidTs(NaN), false);
+});
+
+/* ---- Étape 3 : stats, dépenses, démo ---- */
+Tests.add('répartition par heure et heures de pointe', () => {
+  const t = (h) => new Date(2026, 9, 7, h, 30).getTime();
+  const hist = Calc.hourHistogram([9, 9, 16, 16, 16, 22].map((h) => ({ ts: t(h) })));
+  Tests.eq(hist[16], 3);
+  Tests.eq(hist.reduce((a, b) => a + b, 0), 6);
+  Tests.eq(Calc.topHours(hist, 2), [9, 16]);
+});
+Tests.add('déclencheurs : parts qui font 100 %, « Sans contexte » à la fin', () => {
+  const rows = Calc.triggerShare([{ trigger: 'cafe' }, { trigger: null }, { trigger: 'cafe' }, { trigger: 'stress' }]);
+  Tests.eq(rows.map((r) => r.key), ['cafe', 'stress', 'none']);
+  Tests.near(rows.reduce((a, r) => a + r.pct, 0), 100);
+  Tests.eq(Calc.triggerShare([]), []);
+});
+Tests.add('coût unitaire : prix ou contenu à zéro = non renseigné', () => {
+  const s = Store.defaults().settings;
+  Tests.eq(Calc.unitCosts(s), { snus: null, vape: null });
+  Object.assign(s, { snusBoxPrice: 6.9, snusPerBox: 20, vapeUnitPrice: 3.5, vapeSessionsPerUnit: 0 });
+  Tests.near(Calc.unitCosts(s).snus, 0.345, '', 1e-9);
+  Tests.eq(Calc.unitCosts(s).vape, null);
+});
+Tests.add('dépense : 10 snus + 8 vape, et type sans prix signalé', () => {
+  const s = Object.assign(Store.defaults().settings, { snusBoxPrice: 6.9, snusPerBox: 20, vapeUnitPrice: 3.5, vapeSessionsPerUnit: 40 });
+  const list = [...Array(10)].map(() => ({ type: 'snus' })).concat([...Array(8)].map(() => ({ type: 'vape' })));
+  const sp = Calc.spend(list, s);
+  Tests.near(sp.snus, 3.45);
+  Tests.near(sp.vape, 0.7);
+  Tests.near(sp.total, 4.15);
+  Tests.eq(sp.missing, []);
+  s.vapeUnitPrice = 0;
+  const sp2 = Calc.spend(list, s);
+  Tests.eq(sp2.missing, ['vape']);
+  Tests.near(sp2.total, 3.45);
+});
+Tests.add('début de semaine (lundi) et de mois', () => {
+  Tests.eq(Calc.weekStart('2026-10-07'), '2026-10-05'); // mercredi → lundi
+  Tests.eq(Calc.weekStart('2026-10-05'), '2026-10-05');
+  Tests.eq(Calc.weekStart('2026-10-11'), '2026-10-05'); // dimanche
+  Tests.eq(Calc.monthStart('2026-10-07'), '2026-10-01');
+});
+Tests.add('nicotine snus : portions × mg', () => {
+  Tests.eq(Calc.snusMg(4, { snusMg: 8 }), 32);
+  Tests.eq(Calc.snusMg(4, { snusMg: 0 }), 0);
+});
+Tests.add('démo : reproductible, 21 jours, rien dans le futur', () => {
+  const now = new Date(2026, 9, 7, 15, 0).getTime();
+  const a = Demo.generate(now, 7), b = Demo.generate(now, 7);
+  Tests.eq(a.intakes.length, b.intakes.length);
+  Tests.eq(a.intakes.every((x) => x.ts <= now), true);
+  const days = new Set(a.intakes.map((x) => Dates.dayKey(x.ts)));
+  Tests.eq(days.size >= 20, true);
+  Tests.eq(a.checkins.length, 14);
+  Tests.eq(Store.normalize(a), a);
+});
+Tests.add('graphe : une barre par valeur, rendu sans erreur', () => {
+  const svg = Charts.bars([{ v: 1 }, { v: 0 }, { v: 5, hi: true }], { avg: 2 });
+  Tests.eq((svg.match(/<rect/g) || []).length, 3);
+  Tests.eq(svg.includes('c-avg'), true);
+  Tests.eq((Charts.hbars([{ label: 'Café', pct: 50 }]).match(/<rect/g) || []).length, 2);
 });
 
 App.boot();
