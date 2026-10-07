@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.2 (version finale)**
+**Version 2.3**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -16,13 +16,11 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 
 - **Questionnaire de départ** (facultatif) : usage, motivations, points de santé → bénéfices adaptés.
 - **Observation** : « + Snus » / « + Vape » en un tap, contexte facultatif (déclencheur, intensité), millilitres de vape du jour, correction après coup (Historique), réduction progressive optionnelle.
-- **Stats** : constats automatiques (heures, déclencheur, jour chargé, tendance), calendrier du mois, prises par jour, moyenne 7 j, heures, déclencheurs, dépenses en CHF, nicotine estimée (snus : portions × mg ; vape : ml × mg/ml), corrélation avec le check-in.
-- **Check-in du soir** : sommeil, énergie, humeur, anxiété, fréquence cardiaque au repos.
+- **Stats** : constats automatiques (heures, déclencheur, jour chargé, tendance), calendrier du mois, prises par jour, moyenne 7 j, heures, déclencheurs, dépenses en CHF, nicotine estimée (snus : portions × mg ; vape : ml × mg/ml).
 - **Arrêt** : temps sans nicotine en direct, économies (CHF), doses et ml évités, nicotine évitée, par rapport à la moyenne réelle d'observation ; meilleur enchaînement, message du jour.
 - **J'ai une envie** : minuteur de 10 minutes, respiration guidée, rappel de tes raisons d'arrêter (ta phrase, tes progrès, tes bénéfices), mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
-- **Corps** : frise de repères prudents (tendances générales, pas un avis médical) et bénéfices personnalisés.
-- **Rappels** : carte « Check-in du soir » dans l'app après l'heure choisie, et alerte quotidienne via le calendrier de l'iPhone (fichier .ics), iOS ne permettant pas les notifications programmées sans serveur.
+- **Corps** : en observation, ce que fait la nicotine (avec tes chiffres) et ce qui récupère après l'arrêt ; en arrêt, anneau vers le prochain repère, « En ce moment » (ce qui est normal, ce qui aide), récupération par système (cœur, cerveau, sommeil, humeur, envies, bouche ou gorge), bénéfices personnalisés et frise de 12 repères détaillés. Tendances générales, pas un avis médical.
 - **Aide** intégrée (Réglages → Aide) : fonctionnement, calculs, sauvegarde, ressources (Ligne stop-tabac 0848 000 181).
 - **Mises à jour** : recherchées à l'ouverture, « Recharger » quand une nouvelle version est prête.
 - **Sécurité** : aucune ressource externe ni envoi de données (politique de sécurité du contenu stricte), import validé champ par champ, anti double-tap.
@@ -32,7 +30,6 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 - Tout est stocké dans le `localStorage` de Safari, sur l'appareil. Rien n'est envoyé nulle part.
 - **iOS peut effacer les données** d'une web app peu utilisée : faire un **export** régulier (Réglages → Données → Exporter, puis « Enregistrer dans Fichiers »). L'app le rappelle après 14 jours sans export.
 - Import : Réglages → Données → Importer (le fichier remplace les données, avec « Annuler » juste après).
-- Données de démo : Réglages → Données → Charger des données de démo (observation ou arrêt en cours).
 
 ## Calcul des coûts
 
@@ -46,7 +43,7 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 
 - **Lancer sur Mac** : ouvrir `index.html` dans Safari ou Chrome (vue mobile des outils développeur), ou `python3 -m http.server` puis http://localhost:8000.
 - **Tester sur iPhone sans publier** : `python3 -m http.server` sur le Mac, puis `http://<IP-du-Mac>:8000` sur l'iPhone (même Wi-Fi).
-- **Tests** : ouvrir `index.html?test`. Les tests tournent dans la page, sans toucher aux vraies données (calculs d'économies, dates et fuseaux, minuit, prix à zéro, corrélation, rendu de chaque écran…).
+- **Tests** : ouvrir `index.html?test`. Les tests tournent dans la page, sans toucher aux vraies données (calculs d'économies, dates et fuseaux, minuit, prix à zéro, constats, rendu de chaque écran…) ; le module `Demo` sert à ces tests.
 
 Organisation du script, dans l'ordre : `Util`, `Dates`, `Store` (stockage, migration, import/export), `Calc` (fonctions pures), `Charts` (SVG), `Craving`, `Demo`, `Messages`, `MILESTONES`, `CONCERNS`, `Intakes`, `UI`, `Screens`, feuilles, `Actions`, `Backup`, `App` (routage par `#/écran`), `Tests`.
 

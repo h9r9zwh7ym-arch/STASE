@@ -137,7 +137,7 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 4px 4px var(--safe-bottom);
   background: var(--bar);
   border-top: 1px solid var(--line);
@@ -307,11 +307,8 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + var(--safe-b
 input[type="time"] { width: 100%; border: 0; outline: none; background: transparent; font-family: var(--font-num); font-size: 16px; min-height: 44px; text-align: right; }
 input[type="datetime-local"] { width: 100%; border: 0; outline: none; background: transparent; font-family: var(--font-num); font-size: 16px; min-height: 44px; }
 
-/* Check-in et corrélation */
 .done-mark { width: 40px; height: 40px; border-radius: 20px; background: var(--mint-dim); color: var(--mint); display: flex; align-items: center; justify-content: center; }
 .corr { display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 12px 8px; align-items: center; font-size: 15px; }
-.corr > span { min-width: 0; overflow-wrap: anywhere; }
-@media (max-width: 360px) { .corr { grid-template-columns: minmax(0, 1fr) 64px 64px; font-size: 14px; } }
 .corr .num { font-size: 18px; font-weight: 600; text-align: center; }
 .corr > .tiny { text-align: center; }
 
@@ -349,6 +346,32 @@ details.benefit[open] .benefit__more { display: none; }
 .trend { font-size: 14px; color: var(--text-2); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; }
 .trend.is-good { color: var(--mint); font-weight: 600; }
 .tl__tag--me { color: var(--mint) !important; }
+
+/* Corps : anneau, étape du moment, systèmes, effets */
+.hero { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; }
+.hero__ring { position: relative; width: 112px; height: 112px; }
+.hero__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hero__track { fill: none; stroke: var(--surface-2); stroke-width: 8; }
+.hero__arc { fill: none; stroke: var(--mint); stroke-width: 8; stroke-linecap: round; }
+.is-entering .hero__arc { animation: heroArc 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both; }
+@keyframes heroArc { from { stroke-dashoffset: 263.9; } }
+.hero__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hero__center b { font-family: var(--font-num); font-size: 30px; line-height: 1; }
+.hero__center span { font-size: 12px; color: var(--text-3); }
+.stage { gap: 16px; align-items: start; }
+.stage__item { font-size: 14px; line-height: 1.4; color: var(--text-2); padding-left: 14px; position: relative; }
+.stage__item::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 3px; background: var(--line-2); }
+.stage__item--help::before { background: var(--mint); }
+@media (max-width: 360px) { .stage { grid-template-columns: minmax(0, 1fr); } .hero { grid-template-columns: 92px minmax(0, 1fr); } .hero__ring { width: 92px; height: 92px; } }
+.sys { display: flex; flex-direction: column; gap: 6px; }
+.sys__title { font-size: 15px; font-weight: 600; }
+.sys__done { color: var(--mint); font-weight: 600; }
+.effects { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--text-2); }
+.tl__more summary { list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--mint); min-height: 32px; display: inline-flex; align-items: center; }
+.tl__more summary::-webkit-details-marker { display: none; }
+.tl__more summary::after { content: ' ›'; }
+.tl__more[open] summary::after { content: ' ‹'; }
+.tl__more p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-2); }
 
 /* Frise Corps */
 .timeline { list-style: none; margin: 0; padding: 0; }
@@ -575,10 +598,6 @@ details.benefit[open] .benefit__more { display: none; }
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h4l2.5-5.5 4.5 11 2.5-5.5h5.5"/></svg>
     Corps
   </a>
-  <a class="tab" href="#/checkin" data-tab="checkin">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z"/></svg>
-    Check-in
-  </a>
   <a class="tab" href="#/reglages" data-tab="reglages">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2.5"/><circle cx="10" cy="17" r="2.5"/></svg>
     Réglages
@@ -595,7 +614,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -745,12 +764,11 @@ const Store = {
         askContext: true,            // ouvrir la feuille contexte après « + Snus / + Vape »
         profile: { done: false, uses: null, goals: [], concerns: [], firstUse: null, why: '' }, // questionnaire de départ
         lastExportAt: null,
-        backupSnoozeUntil: null,     // « Plus tard » sur le rappel de sauvegarde
-        reminder: { checkinTime: '21:00', inApp: true, snoozeDate: null } // rappel du check-in du soir
+        backupSnoozeUntil: null      // « Plus tard » sur le rappel de sauvegarde
       },
       intakes: [],   // { id, type, ts, trigger, intensity }
       cravings: [],  // { id, ts, trigger, intensity, resolved, duration }
-      checkins: [],  // { date, sleep, energy, mood, anxiety, hr }
+      checkins: [],  // conservé tel quel pour les anciennes sauvegardes (le check-in a été retiré)
       vapeMl: []     // { date, ml } : millilitres de liquide vapotés ce jour-là
     };
   },
@@ -811,12 +829,6 @@ const Store = {
     if (s.phase === 'arret' && s.quitStart === null) s.phase = 'observation';
     s.baseline = Store.cleanBaseline(s.baseline);
     s.profile = Store.cleanProfile(src.profile);
-    const rm = src.reminder && typeof src.reminder === 'object' ? src.reminder : {};
-    s.reminder = {
-      checkinTime: Reminders.validTime(rm.checkinTime) ? rm.checkinTime : '21:00',
-      inApp: rm.inApp !== false,
-      snoozeDate: /^\d{4}-\d{2}-\d{2}$/.test(rm.snoozeDate) ? rm.snoozeDate : null
-    };
     const red = s.reduction;
     red.on = red.on === true;
     red.weeklyStep = [0.5, 1, 2].includes(Number(red.weeklyStep)) ? Number(red.weeklyStep) : 1;
@@ -1004,73 +1016,11 @@ const Calc = {
   }
 };
 
-/* ---- Calc : check-in et corrélation ---- */
-const CHECKIN_METRICS = [
-  // clé, libellé, bas → haut, sens du « mieux »
-  { key: 'sleep', label: 'Sommeil', lo: 'agité', hi: 'reposant', better: 'up' },
-  { key: 'energy', label: 'Énergie', lo: 'à plat', hi: 'en forme', better: 'up' },
-  { key: 'mood', label: 'Humeur', lo: 'basse', hi: 'bonne', better: 'up' },
-  { key: 'anxiety', label: 'Anxiété', lo: 'calme', hi: 'forte', better: 'down' }
-];
-const CORRELATION_MIN_DAYS = 7;
-
-Object.assign(Calc, {
-  /**
-   * Jour auquel rattacher un check-in : avant 4 h du matin, il compte
-   * pour la veille (le check-in « du soir » fait juste après minuit).
-   */
-  checkinDayFor(ts) {
-    const d = new Date(ts);
-    return d.getHours() < 4 ? Dates.addDays(Dates.dayKey(ts), -1) : Dates.dayKey(ts);
-  },
-
-  mean(values) {
-    const v = values.filter((x) => Number.isFinite(x));
-    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
-  },
-
-  /**
-   * Compare les check-ins des jours les moins et les plus chargés.
-   * Les jours sont triés par nombre de prises puis coupés en deux moitiés
-   * (le jour du milieu est écarté si leur nombre est impair).
-   * Renvoie { enough:false, days } sous CORRELATION_MIN_DAYS jours,
-   * { enough:true, flat:true } si la consommation ne varie pas.
-   */
-  correlation(intakes, checkins, minDays = CORRELATION_MIN_DAYS) {
-    if (!intakes.length) return { enough: false, days: 0 };
-    const first = Dates.dayKey(intakes[0].ts);
-    const today = Dates.todayKey();
-    const counts = {};
-    intakes.forEach((x) => { const k = Dates.dayKey(x.ts); counts[k] = (counts[k] || 0) + 1; });
-    const pairs = checkins
-      .filter((c) => c.date >= first && c.date <= today)
-      .map((c) => ({ ...c, total: counts[c.date] || 0 }))
-      .sort((a, b) => a.total - b.total || a.date.localeCompare(b.date));
-    if (pairs.length < minDays) return { enough: false, days: pairs.length };
-    const half = Math.floor(pairs.length / 2);
-    const low = pairs.slice(0, half), high = pairs.slice(pairs.length - half);
-    const lowMax = low[low.length - 1].total, highMin = high[0].total;
-    if (lowMax === highMin && low[0].total === high[high.length - 1].total) return { enough: true, flat: true, days: pairs.length };
-    const avg = (list, k) => Calc.mean(list.map((p) => p[k]));
-    return {
-      enough: true, flat: false, days: pairs.length,
-      low: { days: low.length, intakes: avg(low, 'total') },
-      high: { days: high.length, intakes: avg(high, 'total') },
-      metrics: CHECKIN_METRICS.map((m) => {
-        const l = avg(low, m.key), h = avg(high, m.key);
-        return { ...m, low: l, high: h, diff: l !== null && h !== null ? h - l : null };
-      })
-    };
-  },
-
-  /** Phrase sobre pour un écart (seuil : un demi-point sur 5). */
-  describeDiff(m) {
-    if (m.diff === null) return 'pas assez de réponses';
-    if (Math.abs(m.diff) < 0.5) return 'à peu près pareil';
-    const higher = m.diff > 0;
-    return `${higher ? 'plus haut' : 'plus bas'} les jours chargés`;
-  }
-});
+/** Moyenne des valeurs numériques (null si aucune). */
+Calc.mean = function (values) {
+  const v = values.filter((x) => Number.isFinite(x));
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+};
 
 /* ---- Calc : raisons d'arrêter (écran « J'ai une envie ») ---- */
 /**
@@ -1536,7 +1486,7 @@ const Demo = {
     return Demo.SLOTS.find((s) => (r -= s.w) < 0) || Demo.SLOTS[0];
   },
 
-  /** 21 jours d'observation se terminant maintenant, avec check-ins. */
+  /** 21 jours d'observation se terminant maintenant (utilisé par les tests). */
   generate(now = Date.now(), seed = 42) {
     const rand = Demo.rng(seed);
     const data = Store.defaults();
@@ -1551,7 +1501,6 @@ const Demo = {
       const key = Dates.addDays(today, -back);
       const start = Dates.keyToStart(key);
       const count = 6 + Math.floor(rand() * 5);
-      let dayTotal = 0;
       for (let i = 0; i < count; i++) {
         const slot = Demo.pickSlot(rand);
         const ts = start + slot.h * 3600000 + Math.floor(rand() * 3600000);
@@ -1562,9 +1511,7 @@ const Demo = {
           trigger: withContext ? slot.trig : null,
           intensity: withContext ? 1 + Math.floor(rand() * 5) : null
         });
-        dayTotal += 1;
       }
-      if (back >= 1 && back <= 14) data.checkins.push(Demo.checkin(key, dayTotal, rand));
       // ml de vape notés la plupart des jours passés (≈ 0,25 ml par session).
       const vapeCount = data.intakes.filter((x) => x.type === 'vape' && Dates.dayKey(x.ts) === key).length;
       if (back >= 1 && rand() > 0.2) data.vapeMl.push({ date: key, ml: Math.round(vapeCount * (0.2 + rand() * 0.1) * 10) / 10 });
@@ -1594,22 +1541,8 @@ const Demo = {
         data.cravings.push({ id: `demo-envie-${day}-${i}`, ts, trigger: slot.trig, intensity: Math.max(1, 4 - Math.floor(day / 2) - Math.floor(rand() * 2)), resolved: true, duration: (3 + Math.floor(rand() * 7)) * 60000 });
       }
     });
-    // Check-ins depuis l'arrêt : sommeil un peu chahuté puis meilleur, cœur plus calme.
-    for (let day = 0; day < 6; day++) {
-      const key = Dates.dayKey(quitStart + day * DAY_MS);
-      data.checkins = data.checkins.filter((c) => c.date !== key);
-      data.checkins.push({ date: key, sleep: [3, 3, 4, 4, 4, 5][day], energy: [2, 3, 3, 3, 4, 4][day], mood: [3, 3, 4, 4, 4, 4][day],
-        anxiety: [4, 3, 3, 2, 2, 2][day], hr: 60 + Math.floor(rand() * 4) });
-    }
     data.cravings.push({ id: 'demo-envie-reprise', ts: relapseTs - 8 * 60000, trigger: 'soiree', intensity: 4, resolved: false, duration: 6 * 60000 });
     return Store.normalize(data);
-  },
-
-  /** Check-in fictif : un peu moins bon les jours chargés. */
-  checkin(key, dayTotal, rand) {
-    const base = dayTotal >= 9 ? 2 : 3;
-    const v = (b) => Math.min(5, Math.max(1, b + Math.round(rand() * 2 - 0.5)));
-    return { date: key, sleep: v(base), energy: v(base), mood: v(base + 1), anxiety: v(dayTotal >= 9 ? 4 : 2), hr: 58 + Math.floor(rand() * 12) };
   }
 };
 
@@ -1879,15 +1812,72 @@ const Messages = {
    (nicotine sans combustion), formulées prudemment. `h` = heures.
    ========================================================================= */
 const MILESTONES = [
-  { h: 1, title: '1 heure', text: 'Le rythme cardiaque, accéléré par la nicotine, commence en général à redescendre.', for: ['tension', 'palpitations'] },
-  { h: 24, title: '24 heures', text: 'La nicotine a en grande partie quitté le sang. Les envies peuvent encore être bien présentes.' },
-  { h: 72, title: '3 jours', text: 'Le pic du manque se situe souvent dans les premiers jours : envies, irritabilité, concentration en dents de scie. Ensuite, en général, ça décroît.' },
-  { h: 168, title: '1 semaine', text: 'Les symptômes physiques s’atténuent souvent. Le sommeil peut encore être chamboulé quelques jours.', for: ['concentration', 'maux'] },
-  { h: 336, title: '2 semaines', text: 'Les envies s’espacent en général et deviennent plus courtes. Côté vape, toux et gorge sèche diminuent souvent.', for: ['souffle'] },
-  { h: 720, title: '1 mois', text: 'Sommeil et humeur se stabilisent souvent. Les réflexes liés aux habitudes (café, repas) s’estompent peu à peu.', for: ['sommeil', 'stress', 'reflux'] },
-  { h: 1008, title: '6 semaines', text: 'Pour le snus : la gencive là où se posait la portion commence souvent à se réparer. Une rétraction déjà installée ne revient pas toujours.', tag: 'snus', for: ['gencives'] },
-  { h: 2160, title: '3 mois', text: 'L’humeur et l’anxiété sont souvent égales ou meilleures qu’avant l’arrêt. Les envies deviennent rares.', for: ['stress'] }
+  { h: 1, title: '1 heure', text: 'Le rythme cardiaque, accéléré par la nicotine, commence en général à redescendre.', for: ['tension', 'palpitations'],
+    more: 'Après chaque prise, la nicotine fait monter le rythme du cœur et la tension pendant un moment. Sans nouvelle dose, cet effet stimulant s’estompe.' },
+  { h: 12, title: '12 heures', text: 'Le taux de nicotine dans le sang est déjà très bas. Les premières envies se font sentir : le corps se réajuste.',
+    more: 'La nicotine est éliminée de moitié en deux heures environ. Ce qui reste ensuite, c’est surtout le manque et l’habitude, pas le produit.' },
+  { h: 24, title: '24 heures', text: 'La nicotine a en grande partie quitté le sang. Les envies peuvent encore être bien présentes.',
+    more: 'Le corps élimine encore pendant quelques jours la cotinine, un dérivé de la nicotine. Bois de l’eau, dors si tu peux : les envies de ce premier jour sont normales.' },
+  { h: 72, title: '3 jours', text: 'Le pic du manque se situe souvent dans les premiers jours : envies, irritabilité, concentration en dents de scie. Ensuite, en général, ça décroît.',
+    more: 'Nervosité, faim, sommeil agité, tête ailleurs : ce sont les signes classiques du sevrage. Ils ne veulent pas dire que ça ne marche pas, au contraire : le corps se réadapte.' },
+  { h: 168, title: '1 semaine', text: 'Les symptômes physiques s’atténuent souvent. Le sommeil peut encore être chamboulé quelques jours.', for: ['concentration', 'maux'],
+    more: 'Le plus dur du manque physique est souvent passé. Les envies restent, mais elles sont plus courtes et plus faciles à laisser passer.' },
+  { h: 240, title: '10 jours', text: 'Les envies deviennent en général moins fréquentes qu’au début. Les moments sans y penser se multiplient.',
+    more: 'Remarque les moments où tu n’y as pas pensé du tout : ils deviennent plus nombreux de jour en jour. C’est le signe que l’automatisme faiblit.' },
+  { h: 336, title: '2 semaines', text: 'Les envies s’espacent en général et deviennent plus courtes. Côté vape, toux et gorge sèche diminuent souvent.', for: ['souffle'],
+    more: 'La plupart des symptômes de sevrage s’estompent en deux à quatre semaines. Ce qui reste, ce sont surtout des réflexes liés à des moments précis.' },
+  { h: 720, title: '1 mois', text: 'Sommeil et humeur se stabilisent souvent. Les réflexes liés aux habitudes (café, repas) s’estompent peu à peu.', for: ['sommeil', 'stress', 'reflux'],
+    more: 'Avec l’usage, le cerveau avait multiplié ses récepteurs à nicotine. Sans nicotine, ils reviennent peu à peu à un niveau habituel, souvent en un à trois mois : c’est l’une des raisons pour lesquelles les envies faiblissent.' },
+  { h: 1008, title: '6 semaines', text: 'Pour le snus : la gencive là où se posait la portion commence souvent à se réparer. Une rétraction déjà installée ne revient pas toujours.', tag: 'snus', for: ['gencives'],
+    more: 'Les irritations et lésions causées par la portion régressent souvent en quelques semaines. Un contrôle chez le dentiste permet de faire le point.' },
+  { h: 2160, title: '3 mois', text: 'L’humeur et l’anxiété sont souvent égales ou meilleures qu’avant l’arrêt. Les envies deviennent rares.', for: ['stress'],
+    more: 'Les études sur l’arrêt montrent en général moins de stress et d’anxiété après quelques mois. Les envies qui restent sont surtout liées à des situations (fête, coup de stress).' },
+  { h: 4380, title: '6 mois', text: 'Pour la plupart des gens, les envies sont devenues rares. Une soirée ou un coup de stress peut encore en réveiller une : elle passe.',
+    more: 'À ce stade, on ne pense souvent plus à la nicotine pendant des jours. Garde ton plan B pour les situations inhabituelles, sans t’inquiéter.' },
+  { h: 8760, title: '1 an', text: 'Le risque de reprise baisse nettement après la première année. L’habitude est, en général, bien derrière toi.',
+    more: 'Une année entière sans nicotine : ton corps et ton quotidien se sont réorganisés sans elle. Le chemin parcouru mérite d’être fêté.' }
 ];
+
+/**
+ * Récupération par grand système : durée indicative après laquelle on observe
+ * en général l'essentiel du changement. `only` : snus ou vape seulement.
+ */
+const SYSTEMS = [
+  { key: 'coeur', title: 'Cœur et tension', h: 24, before: 'Accéléré et sous tension après chaque prise.', after: 'Plus de hausses répétées du rythme et de la tension.' },
+  { key: 'sang', title: 'Nicotine dans le sang', h: 72, before: 'Renouvelée plusieurs fois par jour.', after: 'Nicotine et cotinine éliminées en quelques jours.' },
+  { key: 'sommeil', title: 'Sommeil', h: 504, before: 'Plus léger, surtout avec une prise le soir.', after: 'Souvent agité deux semaines, puis plus profond et régulier.' },
+  { key: 'cerveau', title: 'Cerveau et dépendance', h: 1440, before: 'Habitué à la nicotine : le manque revient entre deux prises.', after: 'Les récepteurs à nicotine se rééquilibrent, souvent en un à trois mois.' },
+  { key: 'humeur', title: 'Humeur et anxiété', h: 2160, before: 'Montagnes russes entre la prise et le manque.', after: 'En général plus stables qu’avant l’arrêt après quelques mois.' },
+  { key: 'envies', title: 'Envies et habitudes', h: 2160, before: 'Liées au café, aux repas, au stress.', after: 'Plus rares et plus courtes au fil des semaines.' },
+  { key: 'bouche', title: 'Bouche et gencives', h: 1008, only: 'snus', before: 'Irritées là où se pose la portion.', after: 'Les lésions régressent souvent en quelques semaines.' },
+  { key: 'gorge', title: 'Gorge et souffle', h: 720, only: 'vape', before: 'Gorge sèche, toux possible.', after: 'Toux et irritation diminuent souvent dans le premier mois.' }
+];
+
+/** Étapes de l'arrêt : ce qui est normal, ce qui aide (carte « En ce moment »). */
+const STAGES = [
+  { upTo: 24, title: 'Les premières heures', normal: ['Des envies fréquentes, parfois fortes', 'Un peu de nervosité'],
+    helps: ['Un grand verre d’eau, les mains occupées', 'Prévenir quelqu’un de confiance', 'Le minuteur « J’ai une envie » à chaque vague'] },
+  { upTo: 72, title: 'Le pic du manque', normal: ['Irritabilité, impatience', 'Concentration en dents de scie', 'Sommeil agité, faim plus présente'],
+    helps: ['Dormir un peu plus si possible', 'Marcher dix minutes quand ça monte', 'Des repas réguliers et des en-cas simples'] },
+  { upTo: 336, title: 'Ça redescend', normal: ['Des envies plus courtes', 'Un appétit encore un peu plus grand', 'Des journées inégales'],
+    helps: ['Bouger un peu chaque jour', 'Éviter, pour l’instant, les situations où tu prenais le plus', 'Te féliciter des envies traversées'] },
+  { upTo: 1440, title: 'De nouvelles habitudes', normal: ['Des envies liées à des moments précis (café, fin de repas)', 'Parfois une envie surprise'],
+    helps: ['Un rituel de remplacement pour chaque moment clé', 'Te faire plaisir avec l’argent économisé'] },
+  { upTo: Infinity, title: 'Consolider', normal: ['Des envies rares, parfois en soirée ou sous stress'],
+    helps: ['Garder un plan B pour les fêtes et les coups durs', 'Se souvenir de ses raisons d’arrêter'] }
+];
+
+/** Ce que fait la nicotine (phase observation). */
+const NICOTINE_EFFECTS = [
+  { text: 'Le cœur s’accélère et la tension monte pendant un moment après chaque prise.' },
+  { text: 'Les vaisseaux se resserrent, ce qui sollicite le système cardiovasculaire.' },
+  { text: 'Le cerveau s’habitue : il multiplie ses récepteurs à nicotine, d’où le manque entre deux prises.' },
+  { text: 'Le « calme » ressenti vient surtout du soulagement de ce manque.' },
+  { text: 'Le sommeil est plus léger, surtout avec une prise en soirée.' },
+  { text: 'La portion irrite la gencive à l’endroit où elle est posée.', only: 'snus' },
+  { text: 'La vapeur peut irriter la gorge et les voies respiratoires.', only: 'vape' }
+];
+
 
 /** Prochain jalon et progression (0–1) pour un enchaînement donné. */
 Calc.nextMilestone = function (currentMs, list = MILESTONES) {
@@ -1903,13 +1893,7 @@ Calc.nextMilestone = function (currentMs, list = MILESTONES) {
  * (d'après la référence, sinon d'après l'historique). Sans aucune info, on le garde.
  */
 Calc.visibleMilestones = function (settings, intakes) {
-  const b = settings.baseline;
-  const uses = settings.profile && settings.profile.uses;
-  let usesSnus;
-  if (b) usesSnus = b.snusPerDay > 0;
-  else if (intakes.length) usesSnus = intakes.some((x) => x.type === 'snus');
-  else usesSnus = uses ? uses !== 'vape' : true;
-  return MILESTONES.filter((m) => m.tag !== 'snus' || usesSnus);
+  return Calc.forUsage(MILESTONES.map((m) => (m.tag === 'snus' ? { ...m, only: 'snus' } : m)), Calc.usage(settings, intakes));
 };
 
 /**
@@ -1937,6 +1921,33 @@ Calc.lastPassed = function (currentMs, list) {
   return passed.length ? passed[passed.length - 1] : null;
 };
 
+/** Ce que la personne prend : 'snus', 'vape' ou 'both' (référence, historique, puis questionnaire). */
+Calc.usage = function (settings, intakes) {
+  const b = settings.baseline;
+  if (b) return b.snusPerDay > 0 && b.vapePerDay > 0 ? 'both' : b.snusPerDay > 0 ? 'snus' : b.vapePerDay > 0 ? 'vape' : 'both';
+  if (intakes.length) {
+    const snus = intakes.some((x) => x.type === 'snus'), vape = intakes.some((x) => x.type === 'vape');
+    return snus && vape ? 'both' : snus ? 'snus' : 'vape';
+  }
+  return (settings.profile && settings.profile.uses) || 'both';
+};
+
+/** Éléments propres au snus ou à la vape, filtrés selon l'usage. */
+Calc.forUsage = function (list, usage) {
+  return list.filter((x) => !x.only || usage === 'both' || usage === x.only);
+};
+
+/** Progression (0–1) de la récupération d'un système. */
+Calc.systemProgress = function (currentMs, sys) {
+  return Math.max(0, Math.min(1, currentMs / 3600000 / sys.h));
+};
+
+/** Étape de l'arrêt pour la carte « En ce moment ». */
+Calc.stageInfo = function (currentMs) {
+  const h = currentMs / 3600000;
+  return STAGES.find((st) => h < st.upTo);
+};
+
 /** État de chaque jalon : passé, prochain, à venir. */
 Calc.milestoneStates = function (currentMs, list) {
   const h = currentMs / 3600000;
@@ -1951,21 +1962,20 @@ Calc.milestoneStates = function (currentMs, list) {
 /* =========================================================================
    Bénéfices personnalisés — questionnaire de départ.
    Textes prudents : tendances générales, jamais de promesse ni de diagnostic.
-   `track` = mesure du check-in qui permet de suivre ce bénéfice.
    `only` = point affiché seulement pour le snus ou la vape.
    ========================================================================= */
 const CONCERNS = [
-  { key: 'tension', label: 'Tension élevée', title: 'Cœur et tension', track: 'hr',
+  { key: 'tension', label: 'Tension élevée', title: 'Cœur et tension',
     text: 'Chaque prise de nicotine accélère le cœur et fait monter la tension pendant un moment, plusieurs fois par jour. Sans nicotine, ces hausses répétées disparaissent : le rythme cardiaque redescend en général dès les premières heures.',
     note: 'Si tu suis un traitement, parles-en à ton médecin : mesurer ta tension pendant l’arrêt peut être utile.' },
-  { key: 'palpitations', label: 'Palpitations, cœur qui s’emballe', title: 'Rythme cardiaque', track: 'hr',
+  { key: 'palpitations', label: 'Palpitations, cœur qui s’emballe', title: 'Rythme cardiaque',
     text: 'La nicotine est un stimulant : elle accélère le cœur et peut favoriser les palpitations. Elles diminuent souvent après l’arrêt.',
     note: 'Des palpitations nouvelles, fortes ou avec malaise méritent un avis médical.' },
-  { key: 'stress', label: 'Stress ou anxiété', title: 'Stress et anxiété', track: 'anxiety',
+  { key: 'stress', label: 'Stress ou anxiété', title: 'Stress et anxiété',
     text: 'La nicotine semble calmer, mais elle soulage surtout le manque qu’elle crée entre deux prises. Les études sur l’arrêt montrent en général moins de stress et d’anxiété après quelques semaines, même si les premiers jours peuvent être plus tendus.' },
-  { key: 'sommeil', label: 'Sommeil difficile', title: 'Sommeil', track: 'sleep',
+  { key: 'sommeil', label: 'Sommeil difficile', title: 'Sommeil',
     text: 'Stimulante, la nicotine retarde l’endormissement et rend le sommeil plus léger ; le manque peut aussi réveiller la nuit. Le sommeil est souvent chamboulé une à deux semaines, puis s’améliore en général.' },
-  { key: 'concentration', label: 'Concentration en dents de scie', title: 'Concentration', track: 'energy',
+  { key: 'concentration', label: 'Concentration en dents de scie', title: 'Concentration',
     text: 'La concentration baisse souvent la première semaine. Elle revient ensuite en général à son niveau, sans les creux entre deux prises.' },
   { key: 'gencives', label: 'Gencives sensibles ou qui reculent', title: 'Bouche et gencives', only: 'snus',
     text: 'Le snus irrite la gencive là où se pose la portion. Ces lésions régressent souvent en quelques semaines après l’arrêt. Une gencive déjà rétractée ne repousse pas, mais elle ne recule plus sous l’effet du snus.',
@@ -2007,25 +2017,6 @@ Object.assign(Calc, {
     return (milestone.for || []).some((k) => concerns.includes(k));
   },
 
-  /**
-   * Évolution d'une mesure du check-in avant / depuis l'arrêt.
-   * Renvoie { before, after, n } (null si moins de 3 soirs de chaque côté),
-   * ou { current, n } en observation.
-   */
-  metricTrend(checkins, key, quitStart) {
-    const vals = (list) => list.map((c) => c[key]).filter((v) => Number.isFinite(v));
-    if (!quitStart) {
-      const v = vals(checkins.slice(-14));
-      return v.length >= 3 ? { current: Calc.mean(v), n: v.length } : null;
-    }
-    const q = Dates.dayKey(quitStart);
-    const before = vals(checkins.filter((c) => c.date < q).slice(-14));
-    const after = vals(checkins.filter((c) => c.date >= q).slice(-14));
-    if (before.length < 3 || after.length < 3) return null;
-    return { before: Calc.mean(before), after: Calc.mean(after), n: after.length };
-  },
-
-  /** Coût annuel au rythme de la référence ou des 30 derniers jours (null sans prix). */
   /**
    * Coût annuel : au rythme de la référence (avant l'arrêt) si elle existe,
    * sinon des 30 derniers jours. Vape : ml × prix du ml quand c'est possible,
@@ -2130,7 +2121,7 @@ const Anim = {
     if (el && el.getAttribute('aria-pressed') === 'true') { el.classList.remove('pick-pop'); void el.offsetWidth; el.classList.add('pick-pop'); }
   },
 
-  /** Éclat de petits points autour d'un élément (check-in validé, envie traversée…). */
+  /** Éclat de petits points autour d'un élément (envie traversée, repère atteint…). */
   burst(el, count = 12) {
     if (!el || Anim.reduced()) return;
     const host = document.createElement('span');
@@ -2344,7 +2335,6 @@ const Screens = {
         <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
       </section>
       ${isToday ? Screens.whyCard() : ''}
-      ${isToday ? Screens.checkinCard() : ''}
       ${isToday ? Screens.backupCard() : ''}
     </div>`;
   },
@@ -2429,9 +2419,6 @@ const Screens = {
         <p>Rien n'est remis à zéro. Le compteur repart de ta dernière prise, mais ton total de jours sans nicotine et ton meilleur enchaînement restent. La plupart des gens arrêtent après plusieurs essais.</p>`)}
       ${q('Réduction progressive', `
         <p>En observation, tu peux te fixer une cible qui baisse chaque semaine (0,5, 1 ou 2 prises par jour en moins). Dépasser la cible n'est qu'un repère, jamais un échec.</p>`)}
-      ${q('Check-in du soir et corrélation', `
-        <p>Quatre échelles (sommeil, énergie, humeur, anxiété) et, si tu veux, ta fréquence cardiaque au repos. Après 7 soirs, STASE compare ces mesures entre tes jours légers et tes jours chargés.</p>
-        <p>C'est une tendance, pas une preuve : le lien peut aller dans les deux sens.</p>`)}
       ${q('Comment sont calculés les chiffres', `
         <p><strong>Coût d'un snus</strong> : prix de la boîte ÷ portions. <strong>Vape</strong> : ml × prix du ml les jours où tu notes les ml, sinon sessions × prix d'une session.</p>
         <p><strong>Économies et doses évitées</strong> : ce que ta référence prévoyait depuis l'arrêt, moins ce que tu as réellement pris. Jamais négatif.</p>
@@ -2441,10 +2428,10 @@ const Screens = {
       ${q('Sauvegarde et confidentialité', `
         <p>Tes données ne quittent jamais ce téléphone : pas de compte, pas de serveur. Revers de la médaille : iOS peut effacer les données d'une web app peu utilisée.</p>
         <p>Exporte régulièrement (Réglages → Données → Exporter, puis « Enregistrer dans Fichiers »). L'app te le rappelle après 14 jours. L'import remplace les données, avec « Annuler » juste après.</p>`)}
-      ${q('Installer, mettre à jour, rappels', `
+      ${q('Installer et mettre à jour', `
         <p><strong>Installer</strong> : dans Safari, Partager → « Sur l'écran d'accueil ».</p>
         <p><strong>Mises à jour</strong> : l'app les cherche à l'ouverture et propose « Recharger ». Tu peux aussi lancer la recherche en bas des Réglages. Tes données ne sont jamais touchées.</p>
-        <p><strong>Rappels</strong> : iOS ne permet pas à une web app de programmer des notifications. Le bouton « Ajouter le rappel au calendrier » crée une alerte quotidienne fiable dans le calendrier de l'iPhone.</p>`)}
+`)}
       ${q('Besoin d’aide ?', `
         <p>Arrêter seul est possible, mais être accompagné augmente nettement les chances de réussite.</p>
         <p><strong>Ligne stop-tabac</strong> (Suisse), conseils gratuits par des spécialistes : <a class="link--mint" href="tel:0848000181">0848 000 181</a>.</p>
@@ -2453,17 +2440,6 @@ const Screens = {
         <p>STASE ne remplace pas un avis médical. En cas d'urgence : <a class="link--mint" href="tel:144">144</a>.</p>`)}
       </div>
     </div>`;
-  },
-
-  /** Rappel discret du check-in du soir. */
-  checkinCard() {
-    if (!Reminders.checkinDue(Store.data.settings, Store.data.checkins)) return '';
-    return `<section class="card card--featured" style="gap:10px">
-      <span class="label" style="color:var(--mint)">Check-in du soir</span>
-      <span class="small">Sommeil, énergie, humeur, anxiété : un petit point sur ta journée.</span>
-      <div class="grid-2"><button type="button" class="btn" data-action="checkin-snooze">Pas ce soir</button>
-        <a class="btn btn--primary" href="#/checkin">Faire le check-in</a></div>
-    </section>`;
   },
 
   /** Rappel discret d'exporter (iOS peut effacer les données). */
@@ -2548,7 +2524,6 @@ const Screens = {
         ${traversed ? `<span class="small faint">${traversed} envie${traversed > 1 ? 's' : ''} traversée${traversed > 1 ? 's' : ''} depuis le début.</span>` : ''}
       </section>
 
-      ${Screens.checkinCard()}
       ${Screens.backupCard()}
       <div class="row" style="justify-content:center;gap:20px">
         <a class="link" href="#/reprendre">Noter une prise</a>
@@ -2800,7 +2775,6 @@ const Screens = {
       ${Screens.calendarCard()}
       ${Screens.statsHours(inRange)}
       ${Screens.statsTriggers(inRange)}
-      ${Screens.correlationCard()}
       ${Screens.statsSpend(intakes, today)}
       ${Screens.statsNicotine(avg)}
     </div>`;
@@ -2871,7 +2845,6 @@ const Screens = {
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Envies traversées</span><span class="value" style="font-size:28px">${traversed}</span></div>
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Durée moyenne</span><span class="value" style="font-size:28px">${avgDur !== null ? `${Math.max(1, Math.round(avgDur / 60000))} min` : '—'}</span></div>
       </div>
-      ${Screens.correlationCard()}
     </div>`;
   },
 
@@ -2975,7 +2948,6 @@ const Screens = {
         <span>Indique le prix d'une boîte de snus et d'une capsule de vape.</span>
         <a class="link link--mint" href="#/reglages" style="align-self:flex-start">Ouvrir les réglages</a>
       </section>
-      <button type="button" class="btn btn--dashed" data-action="demo-ask">Essayer avec des données de démo</button>
     </div>`;
   },
   /* ---- Questionnaire de départ ---- */
@@ -3072,7 +3044,7 @@ const Screens = {
     const st = Store.data.settings;
     const concerns = profile.concerns.map((k) => CONCERN_BY_KEY[k]).filter(Boolean);
     Screens.compactCards = compact;
-    const cards = concerns.map((c) => Screens.benefitCard(c.title, c.text, Screens.trackLine(c.track, st), c.note))
+    const cards = concerns.map((c) => Screens.benefitCard(c.title, c.text, '', c.note))
       .concat(profile.goals.map((g) => Screens.goalCard(g, st)));
     Screens.compactCards = false;
     return cards.join('');
@@ -3126,27 +3098,6 @@ const Screens = {
     return text ? Screens.benefitCard(title, text) : '';
   },
 
-  /** Ligne « ce que STASE mesure pour toi » sous un bénéfice. */
-  trackLine(track, st) {
-    if (!track) return '';
-    const meta = {
-      hr: { name: 'Ta fréquence cardiaque au repos', ask: 'ta fréquence cardiaque', better: 'down', fmt: (v) => `${Math.round(v)} bpm`, eps: 2 },
-      sleep: { name: 'Ton sommeil', ask: 'ton sommeil', better: 'up', fmt: (v) => `${Util.formatNum(v, 1)}/5`, eps: 0.3 },
-      anxiety: { name: 'Ton anxiété', ask: 'ton anxiété', better: 'down', fmt: (v) => `${Util.formatNum(v, 1)}/5`, eps: 0.3 },
-      energy: { name: 'Ton énergie', ask: 'ton énergie', better: 'up', fmt: (v) => `${Util.formatNum(v, 1)}/5`, eps: 0.3 }
-    }[track];
-    const t = Calc.metricTrend(Store.data.checkins, track, st.phase === 'arret' ? st.quitStart : null);
-    if (t && 'before' in t) {
-      const diff = t.after - t.before;
-      const good = Math.abs(diff) >= meta.eps && (meta.better === 'up' ? diff > 0 : diff < 0);
-      return `<p class="trend${good ? ' is-good' : ''}">${meta.name} : ${meta.fmt(t.before)} avant → ${meta.fmt(t.after)} depuis l'arrêt</p>`;
-    }
-    if (t) {
-      return `<p class="trend">${meta.name} en ce moment : ${meta.fmt(t.current)} en moyenne sur ${t.n} soirs. STASE comparera avant et après l'arrêt.</p>`;
-    }
-    return `<p class="trend"><a class="link--mint" href="#/checkin">Note ${meta.ask} au check-in du soir</a> : l'évolution s'affichera ici.</p>`;
-  },
-
   /** Section « Pour toi » (Corps) ou invitation au questionnaire. */
   forYou(title) {
     const pr = Store.data.settings.profile;
@@ -3158,7 +3109,7 @@ const Screens = {
       <span class="small muted">Quatre questions (tension, stress, sommeil…) pour voir ce que l'arrêt peut t'apporter, à toi.</span></a>`;
   },
 
-  /** Corps — frise verticale des jalons. */
+  /** Corps — en arrêt : progression, étape du moment, récupération, bénéfices, repères. */
   corps() {
     const st = Store.data.settings;
     const list = Calc.visibleMilestones(st, Store.data.intakes);
@@ -3167,27 +3118,75 @@ const Screens = {
     const states = Calc.milestoneStates(streak.current, list);
     const next = Calc.nextMilestone(streak.current, list);
     const hadIntake = streak.lastTs > st.quitStart;
+    const stage = Calc.stageInfo(streak.current);
     return `<div class="screen">
       <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="small muted">Ce qui change depuis ta ${hadIntake ? 'dernière prise' : 'dernière prise, au début de l’arrêt'}, il y a ${Screens.durationShort(streak.current)}.</span></header>
-      ${next ? `<section class="card card--featured" style="gap:12px">
-        <span class="label" style="color:var(--mint)">Prochain repère</span>
-        <div class="row" style="align-items:baseline"><span class="value">${next.title}</span><span class="small muted">dans ${Screens.durationShort(next.remainingMs)}</span></div>
-        <p style="font-size:15px;line-height:1.5">${Util.esc(next.text)}</p>
-        <div class="progress"><span style="width:${(next.progress * 100).toFixed(1)}%"></span></div>
-      </section>` : `<section class="card card--featured" style="gap:8px">
-        <span class="label" style="color:var(--mint)">Tous les repères sont passés</span>
-        <p style="font-size:15px;line-height:1.5">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>
-      </section>`}
+        <span class="small muted">Ce qui change depuis ta dernière prise, il y a ${Screens.durationShort(streak.current)}.</span></header>
+      ${Screens.corpsHero(next, streak.current)}
+      <section class="card" style="gap:12px">
+        <span class="label" style="color:var(--mint)">En ce moment · ${Util.esc(stage.title)}</span>
+        <div class="grid-2 stage">
+          <div class="stack" style="gap:6px"><span class="small" style="font-weight:700">C’est normal</span>${stage.normal.map((t) => `<span class="stage__item">${Util.esc(t)}</span>`).join('')}</div>
+          <div class="stack" style="gap:6px"><span class="small" style="font-weight:700">Ce qui aide</span>${stage.helps.map((t) => `<span class="stage__item stage__item--help">${Util.esc(t)}</span>`).join('')}</div>
+        </div>
+      </section>
+      ${Screens.systemsCard(streak.current, true)}
       ${Screens.forYou('Pour toi')}
       <h2 class="label">Repères</h2>
       ${Screens.timeline(states)}
       ${hadIntake ? '<p class="small muted">Les repères repartent de ta dernière prise, mais ton total de jours sans nicotine reste dans Stats.</p>' : ''}
-      <p class="tiny faint">Repères généraux pour le snus et la vape, variables d'une personne à l'autre. Ce n'est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>
+      ${Screens.corpsNote()}
     </div>`;
   },
 
-  /** Frise : nœud + trait à gauche, texte à droite. */
+  /** Anneau de progression vers le prochain repère. */
+  corpsHero(next, currentMs) {
+    const C = 2 * Math.PI * 42;
+    const pct = next ? next.progress : 1;
+    const d = Dates.splitDuration(currentMs);
+    const center = d.d ? `<b>${d.d}</b><span>jour${d.d > 1 ? 's' : ''}</span>` : `<b>${d.h}</b><span>heure${d.h > 1 ? 's' : ''}</span>`;
+    return `<section class="card card--featured hero">
+      <div class="hero__ring" role="img" aria-label="${next ? `${Math.floor(pct * 100)} % jusqu’au repère ${Util.esc(next.title)}` : 'Tous les repères atteints'}">
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="hero__track"/>
+          <circle cx="50" cy="50" r="42" class="hero__arc" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg>
+        <span class="hero__center">${center}</span>
+      </div>
+      <div class="stack" style="gap:6px;min-width:0">
+        ${next ? `<span class="label" style="color:var(--mint)">Prochain repère</span>
+          <span class="value" style="font-size:24px">${Util.esc(next.title)}</span>
+          <span class="small muted">dans ${Screens.durationShort(next.remainingMs)}</span>
+          <p class="small" style="line-height:1.5">${Util.esc(next.text)}</p>`
+        : `<span class="label" style="color:var(--mint)">Tous les repères sont passés</span>
+          <p class="small" style="line-height:1.5">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>`}
+      </div>
+    </section>`;
+  },
+
+  /** « Ton corps récupère » : un système par ligne, avec sa progression (ou ce qui t'attend). */
+  systemsCard(currentMs, started) {
+    const usage = Calc.usage(Store.data.settings, Store.data.intakes);
+    const rows = Calc.forUsage(SYSTEMS, usage).map((sys) => {
+      const p = started ? Calc.systemProgress(currentMs, sys) : 0;
+      const when = sys.h < 48 ? `${sys.h} h` : sys.h < 24 * 60 ? `${Math.round(sys.h / 24)} jours` : `${Math.round(sys.h / 24 / 30)} mois`;
+      const status = !started ? `en général sous ${when}` : p >= 1 ? 'l’essentiel est fait' : `${Math.floor(p * 100)} %`;
+      return `<div class="sys">
+        <div class="row" style="align-items:baseline"><span class="sys__title">${Util.esc(sys.title)}</span><span class="tiny ${p >= 1 ? 'sys__done' : 'faint'}">${status}</span></div>
+        <div class="progress"><span style="width:${(p * 100).toFixed(1)}%"></span></div>
+        <span class="tiny faint">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
+      </div>`;
+    }).join('');
+    return `<section class="card" style="gap:14px">
+      <span class="label" style="color:var(--mint)">${started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt'}</span>
+      ${rows}
+      <p class="tiny faint">Durées indicatives : chacun récupère à son rythme.</p>
+    </section>`;
+  },
+
+  corpsNote() {
+    return '<p class="tiny faint">Repères généraux pour le snus et la vape, variables d’une personne à l’autre. Ce n’est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>';
+  },
+
+  /** Frise : nœud + trait à gauche, texte à droite, détail dépliable. */
   timeline(states) {
     return `<ol class="timeline" aria-label="Repères">${states.map((m, i) => {
       const last = i === states.length - 1;
@@ -3197,102 +3196,46 @@ const Screens = {
       return `<li class="tl tl--${m.state}">
         <div class="tl__rail"><span class="tl__node">${m.state === 'done' ? Icon.check : ''}</span>${last ? '' : `<span class="tl__line${lineOn ? ' is-on' : ''}"></span>`}</div>
         <div class="tl__body">
-          <span class="tl__title">${m.title}${tag ? ` <span class="tl__tag">${tag}</span>` : ''}${m.tag === 'snus' ? ' <span class="tl__tag">snus</span>' : ''}${forMe ? ' <span class="tl__tag tl__tag--me">pour toi</span>' : ''}</span>
+          <span class="tl__title">${Util.esc(m.title)}${tag ? ` <span class="tl__tag">${tag}</span>` : ''}${m.tag === 'snus' ? ' <span class="tl__tag">snus</span>' : ''}${forMe ? ' <span class="tl__tag tl__tag--me">pour toi</span>' : ''}</span>
           <span class="tl__text">${Util.esc(m.text)}</span>
+          ${m.more ? `<details class="tl__more"><summary>En savoir plus</summary><p>${Util.esc(m.more)}</p></details>` : ''}
         </div>
       </li>`;
     }).join('')}</ol>`;
   },
 
-  /** Corps en phase observation : aperçu grisé et invitation, sans pression. */
+  /** Corps en observation : ce que fait la nicotine aujourd'hui, puis ce qui t'attend. */
   corpsObservation(list) {
+    const st = Store.data.settings;
+    const usage = Calc.usage(st, Store.data.intakes);
+    const rate = Calc.dailyRate(st, Store.data.intakes);
+    const avg = Calc.avgPerDay(Store.data.intakes, Dates.todayKey(), 7);
+    const mlAvg = Calc.mlAverage(Store.data.vapeMl, Dates.addDays(Dates.todayKey(), -7), Dates.addDays(Dates.todayKey(), -1));
+    const mg = (avg && st.snusMg > 0 ? avg.snus * st.snusMg : 0) + (mlAvg && st.vapeMgPerMl > 0 ? mlAvg.ml * st.vapeMgPerMl : 0);
+    const intro = rate
+      ? `Avec environ ${Util.formatNum(rate, 0)} prises par jour${mg ? ` (≈ ${Util.formatNum(mg, 0)} mg de nicotine)` : ''}, ton corps reçoit un stimulant plusieurs fois par jour :`
+      : 'À chaque prise, ton corps reçoit un stimulant :';
     return `<div class="screen">
       <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="small muted">La frise démarre le jour où tu passes en mode arrêt.</span></header>
-      <section class="card card--empty" style="gap:12px">
-        <strong>Rien ne presse.</strong>
-        <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu seras prêt, tu verras ici ce qui change, heure après heure, puis semaine après semaine.</span>
-        <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret" style="align-self:flex-start">Passer en mode arrêt</button>
+        <span class="small muted">Ce que fait la nicotine aujourd'hui, et ce qui change quand on arrête.</span></header>
+      <section class="card" style="gap:10px">
+        <span class="label">La nicotine dans ton corps</span>
+        <p class="small" style="line-height:1.5">${Util.esc(intro)}</p>
+        <ul class="effects">${Calc.forUsage(NICOTINE_EFFECTS, usage).map((e) => `<li>${Util.esc(e.text)}</li>`).join('')}</ul>
+        <p class="small" style="line-height:1.5;color:var(--mint)">La bonne nouvelle : la plupart de ces effets s’inversent après l’arrêt, souvent plus vite qu’on ne le pense.</p>
       </section>
+      ${Screens.systemsCard(0, false)}
       ${Screens.forYou('Ce que l’arrêt peut t’apporter')}
       <h2 class="label">Repères après l'arrêt</h2>
       ${Screens.timeline(list.map((m) => ({ ...m, state: 'future' })))}
-      <p class="tiny faint">Repères généraux pour le snus et la vape, variables d'une personne à l'autre. Ce n'est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>
+      <section class="card card--empty" style="gap:10px">
+        <strong>Rien ne presse.</strong>
+        <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu le sens, passe en mode arrêt : cette page suivra ta récupération, heure après heure.</span>
+        <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret" style="align-self:flex-start">Passer en mode arrêt</button>
+      </section>
+      ${Screens.corpsNote()}
     </div>`;
   },
-  /** Check-in du soir : 4 échelles + FC facultative, puis récapitulatif. */
-  checkin() {
-    const day = Calc.checkinDayFor(Date.now());
-    const isToday = day === Dates.todayKey();
-    const existing = Store.data.checkins.find((c) => c.date === day);
-    const editing = App.checkinDraft && App.checkinDraft.date === day;
-    const title = isToday ? 'Ce soir' : 'Hier soir';
-    const sub = isToday ? '' : `Check-in du ${Dates.formatDayLong(Dates.keyToStart(day)).toLowerCase()}.`;
-    return `<div class="screen">
-      <header class="stack" style="gap:6px"><h1 class="title">${title}</h1>${sub ? `<span class="small muted">${Util.esc(sub)}</span>` : ''}</header>
-      ${existing && !editing ? Screens.checkinDone(existing) : Screens.checkinForm(day, existing)}
-      ${Screens.correlationCard()}
-    </div>`;
-  },
-
-  checkinForm(day, existing) {
-    if (!App.checkinDraft || App.checkinDraft.date !== day) {
-      App.checkinDraft = existing ? { ...existing, hr: existing.hr ?? '' } : { date: day, sleep: null, energy: null, mood: null, anxiety: null, hr: '' };
-    }
-    const d = App.checkinDraft;
-    const complete = CHECKIN_METRICS.every((m) => d[m.key]);
-    return `${CHECKIN_METRICS.map((m) => `
-      <div class="stack" role="group" aria-label="${m.label}" style="gap:8px">
-        <div class="row" style="align-items:baseline"><span style="font-size:15px;font-weight:700">${m.label}</span>
-          <span class="tiny faint">${m.lo} → ${m.hi}</span></div>
-        <div class="grid-5">${[1, 2, 3, 4, 5].map((n) =>
-          `<button type="button" class="scale-btn" style="height:48px" data-action="ci-pick" data-key="${m.key}" data-value="${n}"
-            aria-pressed="${d[m.key] === n}" aria-label="${m.label} ${n} sur 5">${n}</button>`).join('')}</div>
-      </div>`).join('')}
-      <label class="stack" style="gap:8px">
-        <span style="font-size:15px;font-weight:700">Fréquence cardiaque au repos <span class="faint" style="font-weight:500">· ${Store.data.settings.profile.concerns.some((c) => c === 'tension' || c === 'palpitations') ? 'utile pour suivre ton cœur' : 'facultatif'}</span></span>
-        <span class="field__box" style="width:100%"><input type="text" inputmode="numeric" data-ci="hr" placeholder="—"
-          value="${Util.esc(d.hr ?? '')}" style="text-align:left" autocomplete="off"><span class="field__unit">bpm</span></span>
-      </label>
-      <button type="button" class="btn btn--primary btn--block" data-action="ci-submit" ${complete ? '' : 'disabled'}>Valider</button>`;
-  },
-
-  checkinDone(c) {
-    const items = CHECKIN_METRICS.map((m) => `<span>${m.label} <strong class="num">${c[m.key]}</strong></span>`).join('<span class="faint">·</span>');
-    return `<section class="card" style="gap:10px;padding:24px 22px">
-      <span class="done-mark">${Icon.check}</span>
-      <span class="value" style="font-size:22px;font-weight:600">Noté. Bonne soirée.</span>
-      <p class="small muted" style="display:flex;flex-wrap:wrap;gap:6px">${items}${c.hr ? `<span class="faint">·</span><span>FC <strong class="num">${c.hr}</strong> bpm</span>` : ''}</p>
-      <button type="button" class="link link--mint" data-action="ci-edit" style="align-self:flex-start">Modifier</button>
-    </section>`;
-  },
-
-  /** Carte de corrélation (Check-in et Stats). */
-  correlationCard() {
-    const r = Calc.correlation(Store.data.intakes, Store.data.checkins);
-    const head = '<span class="small muted">Ton corps et ta consommation</span>';
-    if (!r.enough) {
-      const left = CORRELATION_MIN_DAYS - r.days;
-      return `<section class="card card--outline" style="gap:8px">${head}
-        <p class="small">Pas encore assez de données : ${r.days} jour${r.days > 1 ? 's' : ''} avec check-in sur ${CORRELATION_MIN_DAYS}.
-        Encore ${left} soir${left > 1 ? 's' : ''} et STASE pourra comparer ton sommeil, ton humeur et ton anxiété selon tes jours plus ou moins chargés.</p>
-      </section>`;
-    }
-    if (r.flat) {
-      return `<section class="card card--outline" style="gap:8px">${head}
-        <p class="small">Ta consommation est la même presque tous les jours sur la période : impossible de comparer pour l'instant.</p></section>`;
-    }
-    const fmt = (v) => (v === null ? '—' : Util.formatNum(v, 1));
-    return `<section class="card" style="gap:14px">${head}
-      <div class="corr">
-        <span></span><span class="tiny faint">Jours légers<br>≈ ${fmt(r.low.intakes)} prises</span><span class="tiny faint">Jours chargés<br>≈ ${fmt(r.high.intakes)} prises</span>
-        ${r.metrics.map((m) => `<span>${m.label}<br><span class="tiny faint">${Calc.describeDiff(m)}</span></span>
-          <span class="num">${fmt(m.low)}</span><span class="num">${fmt(m.high)}</span>`).join('')}
-      </div>
-      <p class="tiny faint">Moyennes sur 5, à partir de ${r.days} jours (${r.low.days} légers, ${r.high.days} chargés). C'est une tendance, pas une preuve : le lien peut aller dans les deux sens, une mauvaise nuit peut aussi donner plus envie.</p>
-    </section>`;
-  },
-
   reglages() {
     const s = Store.data.settings;
     const n = Store.data.intakes.length;
@@ -3306,17 +3249,6 @@ const Screens = {
       </section>
 
       ${Screens.modeSection(s)}
-
-      <section class="stack">
-        <h2 class="label">Rappels</h2>
-        <div class="group">
-          <label class="field"><span class="field__label"><span>Heure du check-in</span><span class="tiny faint">Le soir, quand tu as un moment</span></span>
-            <span class="field__box" style="width:120px"><input type="time" data-reminder="checkinTime" value="${s.reminder.checkinTime}"></span></label>
-          ${Screens.toggleRow('reminder-inapp', 'Rappel dans l’app', 'Une carte sur Aujourd’hui tant que le check-in n’est pas fait', s.reminder.inApp)}
-        </div>
-        <button type="button" class="btn btn--surface" data-action="reminder-calendar">Ajouter le rappel au calendrier</button>
-        <p class="tiny faint">iOS ne permet pas à une web app de programmer des notifications : le calendrier de l'iPhone s'en charge, de façon fiable, chaque jour à cette heure. Pour changer l'heure, supprime l'ancien événement puis ajoute le nouveau.</p>
-      </section>
 
       <section class="stack">
         <h2 class="label">Profil</h2>
@@ -3363,7 +3295,6 @@ const Screens = {
           <button type="button" class="btn btn--surface" data-action="import">Importer</button>
         </div>
         <a class="btn btn--surface" href="#/historique">Historique des prises</a>
-        <button type="button" class="btn btn--dashed" data-action="demo-ask">Charger des données de démo</button>
         <button type="button" class="link" data-action="wipe-ask" style="align-self:center">Effacer toutes les données</button>
         <p class="tiny faint">${Screens.backupHint(s.lastExportAt, n)}</p>
         <p class="tiny faint">Tout reste sur ce téléphone. iOS peut effacer les données d'une web app peu utilisée : exporte de temps en temps.${App.persisted === true ? ' Safari a accepté de protéger ce stockage.' : ''}</p>
@@ -3783,14 +3714,11 @@ const Actions = {
       App.go('#/aujourdhui');
     }
   },
-  'checkin-snooze'() { Store.update((d) => { d.settings.reminder.snoozeDate = Calc.checkinDayFor(Date.now()); }); },
-  'reminder-inapp'() { Store.update((d) => { d.settings.reminder.inApp = !d.settings.reminder.inApp; }); },
-  'reminder-calendar'() { Reminders.addToCalendar(); },
   'update-check'() { Update.manual(); },
   'history-more'() { App.historyDays += 30; App.render(); },
   'wipe-ask'() {
     UI.openSheet(`<h2 class="title" style="font-size:22px">Effacer toutes les données ?</h2>
-      <p class="muted small">Prises, envies, check-ins, réglages et profil seront supprimés de ce téléphone. Tu pourras annuler juste après ; pour garder une copie, exporte d'abord.</p>
+      <p class="muted small">Prises, envies, réglages et profil seront supprimés de ce téléphone. Tu pourras annuler juste après ; pour garder une copie, exporte d'abord.</p>
       <div class="grid-2"><button type="button" class="btn" data-action="close-sheet">Garder</button>
         <button type="button" class="btn btn--surface" data-action="wipe-confirm">Effacer</button></div>`, 'Effacer les données');
   },
@@ -3943,47 +3871,7 @@ const Actions = {
     }
   },
 
-  /* ---- Check-in ---- */
-  'ci-pick'(el) {
-    App.checkinDraft[el.dataset.key] = Number(el.dataset.value);
-    App.render();
-  },
-  'ci-submit'() {
-    const d = App.checkinDraft;
-    const input = document.querySelector('[data-ci="hr"]');
-    const raw = input ? input.value.trim() : String(d.hr ?? '');
-    const hr = raw === '' ? null : Util.clampInt(Util.parseNum(raw), 25, 220);
-    if (raw !== '' && hr === null) { UI.toast('Fréquence attendue entre 25 et 220 bpm, ou laisse vide.'); return; }
-    const entry = { date: d.date, sleep: d.sleep, energy: d.energy, mood: d.mood, anxiety: d.anxiety, hr };
-    App.checkinDraft = null;
-    App.celebrate = true;
-    Store.update((data) => {
-      data.checkins = data.checkins.filter((c) => c.date !== entry.date).concat(entry).sort((a, b) => a.date.localeCompare(b.date));
-    });
-  },
-  'ci-edit'() {
-    const day = Calc.checkinDayFor(Date.now());
-    const c = Store.data.checkins.find((x) => x.date === day);
-    App.checkinDraft = { ...c, hr: c.hr ?? '' };
-    App.render();
-  },
 
-  /* ---- Démo ---- */
-  'demo-ask'() {
-    UI.openSheet(`
-      <h2 class="title" style="font-size:22px">Charger des données de démo ?</h2>
-      <p class="muted small">Données fictives avec prix et check-ins. Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées ; tu pourras annuler juste après. Pense à exporter avant si tu veux les garder.</p>
-      <div class="stack">
-        <button type="button" class="btn btn--primary btn--block" data-action="demo-load" data-kind="observation">Observation · 3 semaines</button>
-        <button type="button" class="btn btn--block" data-action="demo-load" data-kind="arret">Arrêt en cours · jour 7</button>
-        <button type="button" class="link" data-action="close-sheet" style="align-self:center">Annuler</button>
-      </div>`, 'Données de démo');
-  },
-  'demo-load'(el) {
-    const seed = Math.floor(Math.random() * 1e9);
-    Backup.pending = el.dataset.kind === 'arret' ? Demo.generateQuit(Date.now(), seed) : Demo.generate(Date.now(), seed);
-    Backup.applyPending('Données de démo chargées.');
-  }
 };
 
 /* =========================================================================
@@ -4029,7 +3917,7 @@ const Backup = {
       Backup.pending = res.data;
       UI.openSheet(`
         <h2 class="title" style="font-size:22px">Remplacer les données ?</h2>
-        <p class="muted small">Ce fichier contient ${res.data.intakes.length} prise(s), ${res.data.cravings.length} envie(s) et ${res.data.checkins.length} check-in(s).
+        <p class="muted small">Ce fichier contient ${res.data.intakes.length} prise(s), et ${res.data.cravings.length} envie(s).
         Tes données actuelles (${Store.data.intakes.length} prise(s)) seront remplacées. Tu pourras annuler juste après.</p>
         <div class="grid-2">
           <button type="button" class="btn" data-action="close-sheet">Garder</button>
@@ -4044,73 +3932,14 @@ const Backup = {
     if (!Backup.pending) return;
     Store.replaceAll(Backup.pending);
     Backup.pending = null;
-    App.checkinDraft = null;
+    
     App.viewDay = null;
     UI.closeSheet();
     UI.applyTheme();
     App.render();
     UI.toast(message, 'Annuler', () => {
-      if (Store.restoreBackup()) { App.checkinDraft = null; UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
+      if (Store.restoreBackup()) {  UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
     }, 8000);
-  }
-};
-
-/* =========================================================================
-   Reminders — rappel du check-in du soir.
-   iOS ne laisse pas une web app programmer une notification sans serveur de
-   push : on s'appuie sur le calendrier de l'iPhone (fichier .ics, alerte
-   quotidienne fiable) et sur une carte discrète dans l'app.
-   ========================================================================= */
-const Reminders = {
-  validTime(t) { return typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t); },
-
-  /** Check-in à proposer : rappel actif, heure passée, pas encore fait, pas reporté. */
-  checkinDue(settings, checkins, now = Date.now()) {
-    const r = settings.reminder;
-    if (!r || !r.inApp) return false;
-    const day = Calc.checkinDayFor(now);
-    if (r.snoozeDate === day || checkins.some((c) => c.date === day)) return false;
-    const d = new Date(now);
-    const [h, m] = r.checkinTime.split(':').map(Number);
-    // Avant 4 h du matin, le check-in de la veille reste proposé.
-    return d.getHours() < 4 || d.getHours() * 60 + d.getMinutes() >= h * 60 + m;
-  },
-
-  /** Événement quotidien avec alerte, à l'heure locale de l'appareil. */
-  ics(time, url, now = new Date()) {
-    const [h, m] = time.split(':');
-    const p = Dates.pad;
-    const day = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`;
-    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-    return [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//STASE//Rappel//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-      'BEGIN:VEVENT',
-      'UID:stase-checkin-du-soir',
-      `DTSTAMP:${stamp}`,
-      `DTSTART:${day}T${h}${m}00`,
-      'DURATION:PT5M',
-      'RRULE:FREQ=DAILY',
-      'SUMMARY:STASE · check-in du soir',
-      'DESCRIPTION:Sommeil\\, énergie\\, humeur\\, anxiété.',
-      `URL:${url}`,
-      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:STASE · check-in du soir', 'TRIGGER:PT0M', 'END:VALARM',
-      'END:VEVENT', 'END:VCALENDAR', ''
-    ].join('\r\n');
-  },
-
-  /** Ouvre le fichier .ics : iOS propose « Ajouter au calendrier ». */
-  async addToCalendar() {
-    const time = Store.data.settings.reminder.checkinTime;
-    const url = location.origin + location.pathname + '#/checkin';
-    const name = 'stase-rappel-check-in.ics';
-    const blob = new Blob([Reminders.ics(time, url)], { type: 'text/calendar' });
-    const file = typeof File === 'function' ? new File([blob], name, { type: 'text/calendar' }) : null;
-    try {
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Rappel STASE' });
-      else Backup.download(blob, name);
-    } catch (e) {
-      if (!e || e.name !== 'AbortError') Backup.download(blob, name);
-    }
   }
 };
 
@@ -4184,7 +4013,7 @@ const Update = {
    App — routage par #hash et rendu
    ========================================================================= */
 const App = {
-  routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie', 'reprendre', 'bienvenue', 'historique', 'aide'],
+  routes: ['aujourdhui', 'stats', 'corps', 'reglages', 'envie', 'reprendre', 'bienvenue', 'historique', 'aide'],
   /** Historique : nombre de jours affichés, écran de retour. */
   historyDays: 30,
   historyBack: null,
@@ -4198,8 +4027,6 @@ const App = {
   /** Actions qu'on enchaîne volontairement vite (pas de garde). */
   RAPID: ['ml-step', 'ci-pick', 'sheet-trigger', 'sheet-intensity', 'craving-trigger', 'craving-intensity', 'quiz-pick', 'relapse-trigger', 'cal-prev', 'cal-next', 'day-prev', 'day-next'],
   lastPick: null,
-  /** Check-in en cours de saisie (non enregistré). */
-  checkinDraft: null,
   /** Mois affiché dans le calendrier (null = mois en cours). */
   calMonth: null,
   /** Période des stats : 7 ou 30 jours. */
@@ -4383,12 +4210,6 @@ const App = {
     if (input.dataset.ml) { Vape.setMl(input.dataset.ml, Vape.parse(input.value)); return; }
     if (input.dataset.quiz === 'why' && App.quiz) { App.quiz.a.why = input.value.trim().slice(0, 140); return; }
     if (input.dataset.profile === 'why') { Store.update((d) => { d.settings.profile.why = input.value.trim().slice(0, 140); }); return; }
-    if (input.dataset.reminder === 'checkinTime') {
-      if (Reminders.validTime(input.value)) Store.update((d) => { d.settings.reminder.checkinTime = input.value; });
-      else App.render();
-      return;
-    }
-    if (input.dataset.ci === 'hr' && App.checkinDraft) { App.checkinDraft.hr = input.value.trim(); return; }
     if (input.dataset.sheet === 'ts' && UI.sheetState) {
       const ts = Dates.fromInputValue(input.value);
       if (ts !== null) UI.sheetState.ts = ts;
@@ -4640,7 +4461,6 @@ Tests.add('démo : reproductible, 21 jours, rien dans le futur', () => {
   Tests.eq(a.intakes.every((x) => x.ts <= now), true);
   const days = new Set(a.intakes.map((x) => Dates.dayKey(x.ts)));
   Tests.eq(days.size >= 20, true);
-  Tests.eq(a.checkins.length, 14);
   Tests.eq(Store.normalize(a), a);
 });
 Tests.add('courbe : échantillonnage borné, dernier point gardé', () => {
@@ -4655,54 +4475,6 @@ Tests.add('graphe : une barre par valeur, rendu sans erreur', () => {
   Tests.eq((svg.match(/<rect/g) || []).length, 3);
   Tests.eq(svg.includes('c-avg'), true);
   Tests.eq((Charts.hbars([{ label: 'Café', pct: 50 }]).match(/<rect/g) || []).length, 2);
-});
-
-/* ---- Étape 4 : check-in et corrélation ---- */
-Tests.add('check-in après minuit rattaché à la veille', () => {
-  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 0, 30).getTime()), '2026-10-07');
-  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 3, 59).getTime()), '2026-10-07');
-  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 4, 0).getTime()), '2026-10-08');
-  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 7, 22, 0).getTime()), '2026-10-07');
-});
-Tests.add('corrélation : message honnête sous 7 jours', () => {
-  const base = Date.now() - 20 * DAY_MS;
-  const intakes = [{ type: 'snus', ts: base }];
-  const checkins = [...Array(6)].map((_, i) => ({ date: Dates.dayKey(base + (i + 1) * DAY_MS), sleep: 3, energy: 3, mood: 3, anxiety: 3 }));
-  Tests.eq(Calc.correlation(intakes, checkins), { enough: false, days: 6 });
-  Tests.eq(Calc.correlation([], checkins), { enough: false, days: 0 });
-});
-Tests.add('corrélation : moitiés légère et chargée', () => {
-  const start = Dates.addDays(Dates.todayKey(), -10);
-  const intakes = [], checkins = [];
-  // 8 jours : 4 légers (2 prises, sommeil 4, anxiété 2), 4 chargés (10 prises, sommeil 2, anxiété 4)
-  for (let i = 0; i < 8; i++) {
-    const key = Dates.addDays(start, i);
-    const heavy = i % 2 === 1;
-    for (let k = 0; k < (heavy ? 10 : 2); k++) intakes.push({ type: 'vape', ts: Dates.keyToStart(key) + (10 + k) * 60000 });
-    checkins.push({ date: key, sleep: heavy ? 2 : 4, energy: 3, mood: heavy ? 3 : 3.2, anxiety: heavy ? 4 : 2 });
-  }
-  intakes.sort((a, b) => a.ts - b.ts);
-  const r = Calc.correlation(intakes, checkins);
-  Tests.eq(r.enough, true);
-  Tests.eq(r.flat, false);
-  Tests.eq([r.low.days, r.high.days], [4, 4]);
-  Tests.near(r.low.intakes, 2);
-  Tests.near(r.high.intakes, 10);
-  const by = Object.fromEntries(r.metrics.map((m) => [m.key, m]));
-  Tests.near(by.sleep.diff, -2);
-  Tests.near(by.anxiety.diff, 2);
-  Tests.eq(Calc.describeDiff(by.sleep), 'plus bas les jours chargés');
-  Tests.eq(Calc.describeDiff(by.mood), 'à peu près pareil');
-});
-Tests.add('corrélation : consommation constante = pas de comparaison', () => {
-  const start = Dates.addDays(Dates.todayKey(), -9);
-  const intakes = [], checkins = [];
-  for (let i = 0; i < 7; i++) {
-    const key = Dates.addDays(start, i);
-    intakes.push({ type: 'snus', ts: Dates.keyToStart(key) + 3600000 });
-    checkins.push({ date: key, sleep: 3, energy: 3, mood: 3, anxiety: 3 });
-  }
-  Tests.eq(Calc.correlation(intakes, checkins).flat, true);
 });
 
 /* ---- Étape 5 : phase arrêt ---- */
@@ -4835,7 +4607,7 @@ Tests.add('jalon gencives seulement pour le snus', () => {
 });
 Tests.add('frise : passés, prochain, à venir', () => {
   const states = Calc.milestoneStates(3.6 * DAY_MS, MILESTONES);
-  Tests.eq(states.slice(0, 5).map((m) => m.state), ['done', 'done', 'done', 'next', 'future']);
+  Tests.eq(states.slice(0, 6).map((m) => m.state), ['done', 'done', 'done', 'done', 'next', 'future']); // 1 h, 12 h, 24 h, 3 j, puis 1 semaine
   Tests.eq(states.filter((m) => m.state === 'next').length, 1);
   Tests.eq(Calc.milestoneStates(0, MILESTONES)[0].state, 'next');
   Tests.eq(Calc.milestoneStates(400 * DAY_MS, MILESTONES).every((m) => m.state === 'done'), true);
@@ -4875,16 +4647,6 @@ Tests.add('repères « pour toi » selon les points cochés', () => {
   Tests.eq(Calc.isForMe(oneHour, ['sommeil']), false);
   Tests.eq(MILESTONES.filter((m) => Calc.isForMe(m, ['sommeil'])).length >= 1, true);
 });
-Tests.add('évolution d’une mesure avant / depuis l’arrêt', () => {
-  const quit = new Date(2026, 9, 10, 9).getTime();
-  const ci = (d, sleep, hr) => ({ date: Dates.dayKey(new Date(2026, 9, d, 21).getTime()), sleep, hr });
-  const list = [ci(5, 2, 72), ci(6, 2, 70), ci(7, 3, 71), ci(10, 3, 66), ci(11, 4, 65), ci(12, 4, 64)];
-  const t = Calc.metricTrend(list, 'sleep', quit);
-  Tests.near(t.before, 7 / 3); Tests.near(t.after, 11 / 3);
-  Tests.near(Calc.metricTrend(list, 'hr', quit).after, 65);
-  Tests.eq(Calc.metricTrend(list.slice(0, 4), 'sleep', quit), null);
-  Tests.near(Calc.metricTrend(list, 'sleep', null).current, 3);
-});
 Tests.add('coût annuel : référence, sinon moyenne récente ; null sans prix', () => {
   const s = Object.assign(Store.defaults().settings, { snusBoxPrice: 6.9, snusPerBox: 20, vapeUnitPrice: 3.5, vapeSessionsPerUnit: 40, baseline: { snusPerDay: 4, vapePerDay: 5, days: 10 } });
   Tests.near(Calc.yearlyCost(s, [], []), (4 * 0.345 + 5 * 0.0875) * 365);
@@ -4917,7 +4679,7 @@ Tests.add('rappel de sauvegarde : délais et « plus tard »', () => {
 });
 Tests.add('chaque écran se dessine sans erreur, avec ou sans données', () => {
   const saved = Store.data, savedQuiz = App.quiz;
-  const screens = ['todayObservation', 'stats', 'corps', 'checkin', 'reglages', 'historique', 'bienvenue', 'aide'];
+  const screens = ['todayObservation', 'stats', 'corps', 'reglages', 'historique', 'bienvenue', 'aide'];
   [Store.defaults(), Demo.generate(Date.now(), 1), Demo.generateQuit(Date.now(), 2)].forEach((data) => {
     Store.data = data;
     screens.concat(data.settings.phase === 'arret' ? ['todayQuit', 'reprendre'] : []).forEach((name) => {
@@ -4927,7 +4689,7 @@ Tests.add('chaque écran se dessine sans erreur, avec ou sans données', () => {
       Tests.eq(/undefined|NaN/.test(html.replace(/<svg[\s\S]*?<\/svg>/g, '')), false, `${name} sans undefined/NaN`);
     });
   });
-  Store.data = saved; App.quiz = savedQuiz; App.relapseDraft = null; App.checkinDraft = null;
+  Store.data = saved; App.quiz = savedQuiz; App.relapseDraft = null; 
 });
 
 /* ---- Francs suisses, ml de vape, robustesse ---- */
@@ -5064,32 +4826,6 @@ Tests.add('saisie de ml : vide, invalide, arrondi', () => {
 });
 
 /* ---- Rappels et aide ---- */
-Tests.add('rappel du check-in : heure passée, pas fait, pas reporté', () => {
-  const s = Store.defaults().settings;
-  const at = (h, m = 0) => new Date(2026, 9, 7, h, m).getTime();
-  Tests.eq(Reminders.checkinDue(s, [], at(20, 59)), false);
-  Tests.eq(Reminders.checkinDue(s, [], at(21, 0)), true);
-  Tests.eq(Reminders.checkinDue(s, [{ date: '2026-10-07' }], at(22)), false);
-  Tests.eq(Reminders.checkinDue(s, [], new Date(2026, 9, 8, 1, 30).getTime()), true); // après minuit : celui de la veille
-  Tests.eq(Reminders.checkinDue(s, [{ date: '2026-10-07' }], new Date(2026, 9, 8, 1, 30).getTime()), false);
-  s.reminder.snoozeDate = '2026-10-07';
-  Tests.eq(Reminders.checkinDue(s, [], at(22)), false);
-  s.reminder.snoozeDate = null; s.reminder.inApp = false;
-  Tests.eq(Reminders.checkinDue(s, [], at(22)), false);
-});
-Tests.add('rappel calendrier : événement quotidien avec alerte, lignes CRLF', () => {
-  const ics = Reminders.ics('21:15', 'https://exemple.ch/#/checkin', new Date(2026, 9, 7, 10));
-  Tests.eq(ics.includes('DTSTART:20261007T211500\r\n'), true);
-  Tests.eq(ics.includes('RRULE:FREQ=DAILY'), true);
-  Tests.eq(ics.includes('BEGIN:VALARM'), true);
-  Tests.eq(ics.split('\r\n').every((l) => !l.includes('\n')), true);
-  Tests.eq(Reminders.validTime('21:15') && !Reminders.validTime('25:00') && !Reminders.validTime('9h'), true);
-});
-Tests.add('réglage de rappel : valeur invalide remplacée', () => {
-  const d = Store.normalize({ settings: { reminder: { checkinTime: '99:99', inApp: false } } });
-  Tests.eq(d.settings.reminder, { checkinTime: '21:00', inApp: false, snoozeDate: null });
-});
-
 /* ---- Version finale : repères célébrés ---- */
 Tests.add('nouveau repère : célébré une fois, recalé après une prise', () => {
   const H = 3600000;
@@ -5185,6 +4921,36 @@ Tests.add('messages d’observation : rien sur l’arrêt', () => {
     Tests.eq(Messages.pools.observe.includes(m), true, m);
   }
   Tests.eq(Messages.count() >= 60, true);
+});
+
+/* ---- Corps enrichi ---- */
+Tests.add('corps : usage déduit (référence, historique, questionnaire)', () => {
+  const s = Store.defaults().settings;
+  Tests.eq(Calc.usage(s, []), 'both');
+  Tests.eq(Calc.usage({ ...s, profile: { ...s.profile, uses: 'vape' } }, []), 'vape');
+  Tests.eq(Calc.usage(s, [{ type: 'snus' }]), 'snus');
+  Tests.eq(Calc.usage({ ...s, baseline: { snusPerDay: 0, vapePerDay: 5, days: 7 } }, [{ type: 'snus' }]), 'vape');
+  const keys = (u) => Calc.forUsage(SYSTEMS, u).map((x) => x.key);
+  Tests.eq(keys('vape').includes('bouche'), false);
+  Tests.eq(keys('snus').includes('gorge'), false);
+  Tests.eq(keys('both').includes('bouche') && keys('both').includes('gorge'), true);
+});
+Tests.add('corps : progression des systèmes et étape du moment', () => {
+  const H = 3600000;
+  Tests.eq(Calc.systemProgress(12 * H, SYSTEMS[0]), 0.5);
+  Tests.eq(Calc.systemProgress(1000 * H, SYSTEMS[0]), 1);
+  Tests.eq(Calc.systemProgress(-5, SYSTEMS[0]), 0);
+  Tests.eq(Calc.stageInfo(2 * H).title, 'Les premières heures');
+  Tests.eq(Calc.stageInfo(50 * H).title, 'Le pic du manque');
+  Tests.eq(Calc.stageInfo(10 * 24 * H).title, 'Ça redescend');
+  Tests.eq(Calc.stageInfo(400 * 24 * H).title, 'Consolider');
+});
+Tests.add('corps : contenu santé prudent (repères, systèmes, étapes, effets)', () => {
+  const all = [...MILESTONES.flatMap((m) => [m.text, m.more || '']), ...SYSTEMS.flatMap((x) => [x.before, x.after]),
+    ...STAGES.flatMap((x) => [...x.normal, ...x.helps]), ...NICOTINE_EFFECTS.map((e) => e.text)].join(' ').toLowerCase();
+  ['garanti', 'à coup sûr', 'guérit', 'définitivement', 'cigarette', 'goudron', 'monoxyde', 'échec'].forEach((w) => Tests.eq(all.includes(w), false, w));
+  Tests.eq(MILESTONES.every((m) => m.more), true);
+  Tests.eq(MILESTONES.every((m, i) => i === 0 || m.h > MILESTONES[i - 1].h), true);
 });
 
 App.boot();
