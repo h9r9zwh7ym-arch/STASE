@@ -306,6 +306,27 @@ input[type="datetime-local"] { width: 100%; border: 0; outline: none; background
 .breath__phase { font-family: var(--font-num); font-size: 26px; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .breath__disc { transform: scale(0.8); } }
 
+/* Frise Corps */
+.timeline { list-style: none; margin: 0; padding: 0; }
+.tl { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 16px; }
+.tl__rail { display: flex; flex-direction: column; align-items: center; }
+.tl__node {
+  flex: none; width: 24px; height: 24px; border-radius: 12px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg); border: 2px solid var(--line-2); color: var(--on-mint);
+}
+.tl__node svg { width: 14px; height: 14px; stroke-width: 3; }
+.tl--done .tl__node { background: var(--mint); border: 0; }
+.tl--next .tl__node { border: 3px solid var(--mint); box-shadow: 0 0 0 6px var(--mint-dim); }
+.tl__line { flex: 1; width: 2px; min-height: 20px; background: var(--line); }
+.tl__line.is-on { background: var(--mint); }
+.tl__body { padding: 1px 0 26px; display: flex; flex-direction: column; gap: 4px; }
+.tl__title { font-family: var(--font-num); font-size: 17px; font-weight: 600; }
+.tl__tag { font-family: var(--font-text); font-size: 12px; font-weight: 600; color: var(--text-3); margin-left: 4px; }
+.tl--next .tl__tag { color: var(--mint); }
+.tl__text { font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.tl--future .tl__title, .tl--future .tl__text { color: var(--text-3); }
+
 /* Graphes SVG */
 .chart { display: block; width: 100%; height: auto; overflow: visible; }
 .chart text { font-family: var(--font-text); }
@@ -1302,12 +1323,33 @@ const MILESTONES = [
 ];
 
 /** Prochain jalon et progression (0–1) pour un enchaînement donné. */
-Calc.nextMilestone = function (currentMs) {
+Calc.nextMilestone = function (currentMs, list = MILESTONES) {
   const h = currentMs / 3600000;
-  const idx = MILESTONES.findIndex((m) => m.h > h);
+  const idx = list.findIndex((m) => m.h > h);
   if (idx === -1) return null;
-  const prevH = idx === 0 ? 0 : MILESTONES[idx - 1].h;
-  return { ...MILESTONES[idx], index: idx, progress: Math.min(1, Math.max(0, (h - prevH) / (MILESTONES[idx].h - prevH))), remainingMs: MILESTONES[idx].h * 3600000 - currentMs };
+  const prevH = idx === 0 ? 0 : list[idx - 1].h;
+  return { ...list[idx], index: idx, progress: Math.min(1, Math.max(0, (h - prevH) / (list[idx].h - prevH))), remainingMs: list[idx].h * 3600000 - currentMs };
+};
+
+/**
+ * Jalons pertinents : celui des gencives n'apparaît que pour qui prenait du snus
+ * (d'après la référence, sinon d'après l'historique). Sans aucune info, on le garde.
+ */
+Calc.visibleMilestones = function (settings, intakes) {
+  const b = settings.baseline;
+  const usesSnus = b ? b.snusPerDay > 0 : (intakes.length ? intakes.some((x) => x.type === 'snus') : true);
+  return MILESTONES.filter((m) => m.tag !== 'snus' || usesSnus);
+};
+
+/** État de chaque jalon : passé, prochain, à venir. */
+Calc.milestoneStates = function (currentMs, list) {
+  const h = currentMs / 3600000;
+  let nextFound = false;
+  return list.map((m) => {
+    if (m.h <= h) return { ...m, state: 'done' };
+    if (!nextFound) { nextFound = true; return { ...m, state: 'next' }; }
+    return { ...m, state: 'future' };
+  });
 };
 
 /* =========================================================================
@@ -1473,7 +1515,7 @@ const Screens = {
     const streak = Calc.streaks(Store.data.intakes, st.quitStart, now);
     const av = Calc.avoided(Store.data.intakes, st, now);
     const dayN = Dates.diffDays(Dates.dayKey(st.quitStart), Dates.todayKey()) + 1;
-    const next = Calc.nextMilestone(streak.current);
+    const next = Calc.nextMilestone(streak.current, Calc.visibleMilestones(st, Store.data.intakes));
     const traversed = Store.data.cravings.filter((c) => c.resolved && c.ts >= st.quitStart).length;
     const money = av.money === null ? '—' : Util.formatMoney(av.money);
     const units = av.vape.units !== null && av.vape.avoided > 0 ? ` · ≈ ${Util.formatNum(av.vape.units, 1)} ${st.vapeFormat === 'flacon' ? 'flacon' : 'capsule'}${av.vape.units >= 2 ? 's' : ''}` : '';
@@ -1853,7 +1895,63 @@ const Screens = {
       <button type="button" class="btn btn--dashed" data-action="demo-ask">Essayer avec des données de démo</button>
     </div>`;
   },
-  corps() { return Screens.placeholder('Corps', 6); },
+  /** Corps — frise verticale des jalons. */
+  corps() {
+    const st = Store.data.settings;
+    const list = Calc.visibleMilestones(st, Store.data.intakes);
+    if (st.phase !== 'arret') return Screens.corpsObservation(list);
+    const streak = Calc.streaks(Store.data.intakes, st.quitStart, Date.now());
+    const states = Calc.milestoneStates(streak.current, list);
+    const next = Calc.nextMilestone(streak.current, list);
+    const hadIntake = streak.lastTs > st.quitStart;
+    return `<div class="screen">
+      <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
+        <span class="small muted">Ce qui change depuis ta ${hadIntake ? 'dernière prise' : 'dernière prise, au début de l’arrêt'}, il y a ${Screens.durationShort(streak.current)}.</span></header>
+      ${next ? `<section class="card card--featured" style="gap:12px">
+        <span class="label" style="color:var(--mint)">Prochain repère</span>
+        <div class="row" style="align-items:baseline"><span class="value">${next.title}</span><span class="small muted">dans ${Screens.durationShort(next.remainingMs)}</span></div>
+        <p style="font-size:15px;line-height:1.5">${Util.esc(next.text)}</p>
+        <div class="progress"><span style="width:${(next.progress * 100).toFixed(1)}%"></span></div>
+      </section>` : `<section class="card card--featured" style="gap:8px">
+        <span class="label" style="color:var(--mint)">Tous les repères sont passés</span>
+        <p style="font-size:15px;line-height:1.5">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>
+      </section>`}
+      ${Screens.timeline(states)}
+      ${hadIntake ? '<p class="small muted">Les repères repartent de ta dernière prise, mais ton total de jours sans nicotine reste dans Stats.</p>' : ''}
+      <p class="tiny faint">Repères généraux pour le snus et la vape, variables d'une personne à l'autre. Ce n'est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>
+    </div>`;
+  },
+
+  /** Frise : nœud + trait à gauche, texte à droite. */
+  timeline(states) {
+    return `<ol class="timeline" aria-label="Repères">${states.map((m, i) => {
+      const last = i === states.length - 1;
+      const lineOn = !last && states[i + 1].state === 'done';
+      const tag = m.state === 'done' ? 'atteint' : m.state === 'next' ? 'en cours' : '';
+      return `<li class="tl tl--${m.state}">
+        <div class="tl__rail"><span class="tl__node">${m.state === 'done' ? Icon.check : ''}</span>${last ? '' : `<span class="tl__line${lineOn ? ' is-on' : ''}"></span>`}</div>
+        <div class="tl__body">
+          <span class="tl__title">${m.title}${tag ? ` <span class="tl__tag">${tag}</span>` : ''}${m.tag === 'snus' ? ' <span class="tl__tag">snus</span>' : ''}</span>
+          <span class="tl__text">${Util.esc(m.text)}</span>
+        </div>
+      </li>`;
+    }).join('')}</ol>`;
+  },
+
+  /** Corps en phase observation : aperçu grisé et invitation, sans pression. */
+  corpsObservation(list) {
+    return `<div class="screen">
+      <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
+        <span class="small muted">La frise démarre le jour où tu passes en mode arrêt.</span></header>
+      <section class="card card--empty" style="gap:12px">
+        <strong>Rien ne presse.</strong>
+        <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu seras prêt, tu verras ici ce qui change, heure après heure, puis semaine après semaine.</span>
+        <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret" style="align-self:flex-start">Passer en mode arrêt</button>
+      </section>
+      ${Screens.timeline(list.map((m) => ({ ...m, state: 'future' })))}
+      <p class="tiny faint">Repères généraux pour le snus et la vape, variables d'une personne à l'autre. Ce n'est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>
+    </div>`;
+  },
   /** Check-in du soir : 4 échelles + FC facultative, puis récapitulatif. */
   checkin() {
     const day = Calc.checkinDayFor(Date.now());
@@ -3026,6 +3124,28 @@ Tests.add('démo arrêt : référence calculée, une prise, envies', () => {
   Tests.eq(Calc.quitIntakes(d.intakes, d.settings.quitStart).length, 1);
   Tests.eq(d.cravings.length > 10, true);
   Tests.eq(d.cravings.every((c) => c.ts <= now), true);
+});
+
+/* ---- Étape 6 : frise Corps ---- */
+Tests.add('jalon gencives seulement pour le snus', () => {
+  const s = Store.defaults().settings;
+  const has = (list) => list.some((m) => m.tag === 'snus');
+  Tests.eq(has(Calc.visibleMilestones({ ...s, baseline: { snusPerDay: 0, vapePerDay: 6, days: 7 } }, [])), false);
+  Tests.eq(has(Calc.visibleMilestones({ ...s, baseline: { snusPerDay: 2, vapePerDay: 0, days: 7 } }, [])), true);
+  Tests.eq(has(Calc.visibleMilestones(s, [{ type: 'vape', ts: 1 }])), false);
+  Tests.eq(has(Calc.visibleMilestones(s, [])), true);
+});
+Tests.add('frise : passés, prochain, à venir', () => {
+  const states = Calc.milestoneStates(3.6 * DAY_MS, MILESTONES);
+  Tests.eq(states.slice(0, 5).map((m) => m.state), ['done', 'done', 'done', 'next', 'future']);
+  Tests.eq(states.filter((m) => m.state === 'next').length, 1);
+  Tests.eq(Calc.milestoneStates(0, MILESTONES)[0].state, 'next');
+  Tests.eq(Calc.milestoneStates(400 * DAY_MS, MILESTONES).every((m) => m.state === 'done'), true);
+});
+Tests.add('jalons : formulés comme des tendances, sans promesse', () => {
+  const all = MILESTONES.map((m) => m.text).join(' ').toLowerCase();
+  ['garanti', 'à coup sûr', 'définitivement', 'disparaît complètement', 'cigarette', 'monoxyde', 'goudron'].forEach((w) => Tests.eq(all.includes(w), false, w));
+  Tests.eq(MILESTONES.filter((m) => /souvent|en général/.test(m.text)).length >= 5, true);
 });
 
 App.boot();
