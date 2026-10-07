@@ -91,7 +91,9 @@
    2. Base
    ========================================================================= */
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); }
+/* La page elle-même ne défile jamais : seul #view défile. Ainsi le rebond d'iOS
+   n'entraîne plus la barre d'onglets ni le bouton flottant. */
+html, body { margin: 0; height: 100%; background: var(--bg); position: fixed; inset: 0; overflow: hidden; overscroll-behavior: none; }
 body {
   color: var(--text);
   font-family: var(--font-text);
@@ -119,9 +121,14 @@ h1, h2, h3, p { margin: 0; }
   position: fixed;
   inset: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
   padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + var(--safe-bottom) + 96px);
 }
+.tabbar, .fab, .scrim { touch-action: none; }
+.sheet { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
 body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .screen { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
 
@@ -463,8 +470,38 @@ details.benefit[open] .benefit__more { display: none; }
 .fab:active { transform: translateX(-50%) scale(0.96); }
 .tab:active svg { transform: scale(0.9); }
 
+/* Animations « sympa » : choix, éclats, +1, onglets, ouverture */
+@keyframes pickPop { 0% { transform: scale(0.92); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.pick-pop { animation: pickPop 0.32s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.burst i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 3px; background: var(--c); opacity: 0;
+  animation: burst 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }
+@keyframes burst {
+  0% { opacity: 1; transform: rotate(var(--a)) translateX(0) scale(1); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.4); }
+}
+.float-text { position: absolute; left: 70px; top: 6px; font-family: var(--font-num); font-weight: 700; font-size: 22px; color: var(--mint); pointer-events: none;
+  animation: floatUp 0.9s ease-out forwards; }
+@keyframes floatUp { 0% { opacity: 0; transform: translateY(8px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-28px); } }
+.entry--new { animation: entryIn 0.9s ease-out; }
+@keyframes entryIn { 0% { opacity: 0; transform: translateX(-10px); background: var(--mint-dim); } 30% { opacity: 1; transform: none; background: var(--mint-dim); } 100% { background: transparent; } }
+.tab--pop svg { animation: tabPop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes tabPop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-4px) scale(1.12); } 100% { transform: none; } }
+.fab::after { content: ''; position: absolute; inset: -7px; border-radius: 33px; border: 7px solid rgba(242, 179, 107, 0.12); opacity: 0; pointer-events: none; animation: fabGlow 5s ease-in-out infinite; }
+@keyframes fabGlow { 50% { opacity: 1; } }
+.done-mark { position: relative; }
+.milestone-new { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; transition: opacity 0.35s ease; }
+.splash.out { opacity: 0; pointer-events: none; }
+.splash__s { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.75s cubic-bezier(0.6, 0, 0.3, 1) 0.05s forwards; }
+.splash__word { opacity: 0; letter-spacing: 0.8em; animation: wordIn 0.6s ease-out 0.35s forwards; }
+@keyframes wordIn { to { opacity: 1; letter-spacing: 0.42em; } }
+.breath::before { content: ''; position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle, var(--mint-dim) 0%, transparent 70%);
+  animation: breathe 10s ease-in-out infinite; animation-delay: inherit; animation-play-state: inherit; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+  .splash { display: none; }
 }
 
 /* =========================================================================
@@ -516,7 +553,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '2.0.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -649,6 +686,8 @@ const Store = {
       version: SCHEMA_VERSION,
       settings: {
         phase: 'observation',        // 'observation' | 'arret'
+        seenMilestoneH: null,        // dernier repère déjà célébré (h) ; null = inconnu (mise à jour)
+        milestoneShownAt: null,      // quand il a été atteint (la carte reste quelques heures)
         quitStart: null,             // timestamp du début de l'arrêt
         baseline: null,              // { snusPerDay, vapePerDay, days } figé au passage en arrêt
         snusBoxPrice: 0,             // CHF par boîte
@@ -715,6 +754,8 @@ const Store = {
     if (!['dark', 'light'].includes(s.theme)) s.theme = 'dark';
     if (!['capsule', 'flacon'].includes(s.vapeFormat)) s.vapeFormat = 'capsule';
     s.askContext = s.askContext !== false;
+    s.seenMilestoneH = s.seenMilestoneH !== null && Number.isFinite(Number(s.seenMilestoneH)) && s.seenMilestoneH >= 0 ? Number(s.seenMilestoneH) : null;
+    s.milestoneShownAt = Number.isFinite(Number(s.milestoneShownAt)) && s.milestoneShownAt !== null ? Number(s.milestoneShownAt) : null;
     s.quitStart = s.quitStart !== null && Number.isFinite(Number(s.quitStart)) ? Number(s.quitStart) : null;
     if (s.phase === 'arret' && s.quitStart === null) s.phase = 'observation';
     s.baseline = Store.cleanBaseline(s.baseline);
@@ -1329,6 +1370,7 @@ const Demo = {
     data.settings.phase = 'arret';
     data.settings.quitStart = quitStart;
     data.settings.baseline = Calc.baseline(data.intakes, quitStart, data.vapeMl);
+    data.settings.seenMilestoneH = 24; // la démo montre la célébration du repère « 3 jours »
     const relapseTs = now - (3 * 86400 + 14 * 3600 + 22 * 60) * 1000;
     data.intakes.push({ id: 'demo-reprise', type: 'vape', ts: relapseTs, trigger: 'soiree', intensity: 4 });
     [5, 4, 4, 2, 2, 1, 1].forEach((count, day) => {
@@ -1627,6 +1669,24 @@ Calc.visibleMilestones = function (settings, intakes) {
   return MILESTONES.filter((m) => m.tag !== 'snus' || usesSnus);
 };
 
+/**
+ * Repère atteint depuis la dernière visite (à célébrer une fois), ou null.
+ * Après une prise, les repères repartent : le « déjà vu » redescend avec eux.
+ */
+Calc.newMilestone = function (currentMs, list, seenH) {
+  const last = Calc.lastPassed(currentMs, list);
+  // seenH inconnu (données d'avant la 2.0) : rien n'est célébré après coup.
+  if (!last || seenH === null || last.h <= seenH) return null;
+  return last;
+};
+
+/** Dernier repère atteint pour un enchaînement donné (ou null). */
+Calc.lastPassed = function (currentMs, list) {
+  const h = currentMs / 3600000;
+  const passed = list.filter((m) => m.h <= h);
+  return passed.length ? passed[passed.length - 1] : null;
+};
+
 /** État de chaque jalon : passé, prochain, à venir. */
 Calc.milestoneStates = function (currentMs, list) {
   const h = currentMs / 3600000;
@@ -1808,6 +1868,70 @@ const Anim = {
     el.classList.remove('bump');
     void el.offsetWidth; // relance l'animation
     el.classList.add('bump');
+  },
+
+  /** Petit « pop » sur l'option qu'on vient de choisir (puce, échelle, segment). */
+  pickPop() {
+    const p = App.lastPick;
+    App.lastPick = null;
+    if (!p || !p.value || Anim.reduced()) return;
+    const sel = `[data-action="${p.action}"][data-value="${CSS.escape(p.value)}"]${p.key ? `[data-key="${CSS.escape(p.key)}"]` : ''}`;
+    const el = document.querySelector(sel);
+    if (el && el.getAttribute('aria-pressed') === 'true') { el.classList.remove('pick-pop'); void el.offsetWidth; el.classList.add('pick-pop'); }
+  },
+
+  /** Éclat de petits points autour d'un élément (check-in validé, envie traversée…). */
+  burst(el, count = 12) {
+    if (!el || Anim.reduced()) return;
+    const host = document.createElement('span');
+    host.className = 'burst';
+    host.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('i');
+      const angle = (i / count) * 360 + Math.random() * 20;
+      dot.style.setProperty('--a', `${angle}deg`);
+      dot.style.setProperty('--d', `${38 + Math.random() * 26}px`);
+      dot.style.setProperty('--c', i % 3 === 0 ? 'var(--warm)' : 'var(--mint)');
+      host.appendChild(dot);
+    }
+    el.style.position = el.style.position || 'relative';
+    el.appendChild(host);
+    setTimeout(() => host.remove(), 1000);
+  },
+
+  /** Petit texte qui monte et s'efface (« +1 » au-dessus du compteur). */
+  floatText(el, text) {
+    if (!el || Anim.reduced()) return;
+    const f = document.createElement('span');
+    f.className = 'float-text';
+    f.textContent = text;
+    f.setAttribute('aria-hidden', 'true');
+    el.parentElement.style.position = 'relative';
+    el.parentElement.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+  },
+
+  /** Onglet qui rebondit quand on y arrive. */
+  tabPop(name) {
+    if (Anim.reduced()) return;
+    const t = document.querySelector(`.tab[data-tab="${name}"]`);
+    if (!t) return;
+    t.classList.remove('tab--pop'); void t.offsetWidth; t.classList.add('tab--pop');
+  },
+
+  /** Écran d'ouverture : le S se dessine, le nom apparaît (moins d'une seconde, touche pour passer). */
+  splash() {
+    if (Anim.reduced()) return;
+    const el = document.createElement('div');
+    el.className = 'splash';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = `<svg viewBox="0 0 1024 1024" width="96" height="96"><defs><linearGradient id="sp-s" x1="0" y1="240" x2="0" y2="784" gradientUnits="userSpaceOnUse"><stop offset="0.1" stop-color="#F2B36B"/><stop offset="0.9" stop-color="#5EE6C4"/></linearGradient></defs>
+      <path class="splash__s" pathLength="1" d="M664 256 H512 A128 128 0 0 0 512 512 A128 128 0 0 1 512 768 H360" fill="none" stroke="url(#sp-s)" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="wordmark splash__word">STASE</span>`;
+    document.body.appendChild(el);
+    const out = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
+    el.addEventListener('click', out);
+    setTimeout(out, 1000);
   },
 
   /** Montant qui défile de 0 à sa valeur (affichage final identique). */
@@ -2076,7 +2200,7 @@ const Screens = {
     if (!Reminders.checkinDue(Store.data.settings, Store.data.checkins)) return '';
     return `<section class="card card--featured" style="gap:10px">
       <span class="label" style="color:var(--mint)">Check-in du soir</span>
-      <span class="small">Quatre touches, vingt secondes : sommeil, énergie, humeur, anxiété.</span>
+      <span class="small">Sommeil, énergie, humeur, anxiété : un petit point sur ta journée.</span>
       <div class="grid-2"><button type="button" class="btn" data-action="checkin-snooze">Pas ce soir</button>
         <a class="btn btn--primary" href="#/checkin">Faire le check-in</a></div>
     </section>`;
@@ -2116,12 +2240,23 @@ const Screens = {
     const streak = Calc.streaks(Store.data.intakes, st.quitStart, now);
     const av = Calc.avoided(Store.data.intakes, st, now, Store.data.vapeMl);
     const dayN = Dates.diffDays(Dates.dayKey(st.quitStart), Dates.todayKey()) + 1;
-    const next = Calc.nextMilestone(streak.current, Calc.visibleMilestones(st, Store.data.intakes));
+    const visible = Calc.visibleMilestones(st, Store.data.intakes);
+    const next = Calc.nextMilestone(streak.current, visible);
+    // Repère tout juste atteint, ou atteint il y a moins de 6 h : la carte reste affichée.
+    const recent = st.milestoneShownAt && now - st.milestoneShownAt < 6 * 3600000
+      ? visible.filter((m) => m.h <= streak.current / 3600000 && m.h === st.seenMilestoneH)[0] : null;
+    const fresh = Calc.newMilestone(streak.current, visible, st.seenMilestoneH) || recent || null;
     const traversed = Store.data.cravings.filter((c) => c.resolved && c.ts >= st.quitStart).length;
     const money = av.money === null ? '—' : Util.formatMoney(av.money);
     const units = av.vape.units !== null && av.vape.avoided > 0 ? ` · ≈ ${Util.formatNum(av.vape.units, 1)} ${st.vapeFormat === 'flacon' ? 'flacon' : 'capsule'}${av.vape.units >= 2 ? 's' : ''}` : '';
     return `<div class="screen">
       <header class="header"><span class="wordmark">STASE</span><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
+
+      ${fresh ? `<section class="card card--featured milestone-new" style="gap:8px">
+        <div class="row" style="justify-content:flex-start;gap:12px"><span class="done-mark">${Icon.check}</span>
+          <span class="stack" style="gap:2px"><span class="label" style="color:var(--mint)">Nouveau repère atteint</span><span class="value" style="font-size:22px">${Util.esc(fresh.title)}</span></span></div>
+        <p class="small muted">${Util.esc(fresh.text)}</p>
+      </section>` : ''}
 
       <section class="stack" style="gap:6px">
         <span class="label">Sans nicotine depuis</span>
@@ -2222,7 +2357,7 @@ const Screens = {
         <h1 class="title title--soft">Ça va passer.</h1>
         <p class="muted small">Suis le cercle. Une envie dure rarement plus de dix minutes.</p>
       </section>
-      <div class="breath" aria-hidden="true">
+      <div class="breath" aria-hidden="true" style="animation-delay:-${(el / 1000) % 10}s;animation-play-state:${c.pausedAt ? 'paused' : 'running'}">
         <svg viewBox="0 0 290 290"><circle cx="145" cy="145" r="138" class="breath__track"/>
           <circle cx="145" cy="145" r="138" class="breath__ring" stroke-dasharray="${Craving.CIRC}" stroke-dashoffset="${v.dash}" data-live="craving-ring"/></svg>
         <div class="breath__disc" style="animation-delay:-${(el / 1000) % 10}s;animation-play-state:${c.pausedAt ? 'paused' : 'running'}"></div>
@@ -2775,9 +2910,9 @@ const Screens = {
     const existing = Store.data.checkins.find((c) => c.date === day);
     const editing = App.checkinDraft && App.checkinDraft.date === day;
     const title = isToday ? 'Ce soir' : 'Hier soir';
-    const sub = isToday ? 'Quatre touches, vingt secondes.' : `Check-in du ${Dates.formatDayLong(Dates.keyToStart(day)).toLowerCase()}.`;
+    const sub = isToday ? '' : `Check-in du ${Dates.formatDayLong(Dates.keyToStart(day)).toLowerCase()}.`;
     return `<div class="screen">
-      <header class="stack" style="gap:6px"><h1 class="title">${title}</h1><span class="small muted">${Util.esc(sub)}</span></header>
+      <header class="stack" style="gap:6px"><h1 class="title">${title}</h1>${sub ? `<span class="small muted">${Util.esc(sub)}</span>` : ''}</header>
       ${existing && !editing ? Screens.checkinDone(existing) : Screens.checkinForm(day, existing)}
       ${Screens.correlationCard()}
     </div>`;
@@ -3014,7 +3149,7 @@ const IntakeSheet = {
     UI.sheetState = state;
     UI.openSheet(IntakeSheet.html(state), 'Prise');
   },
-  refresh() { UI.updateSheet(IntakeSheet.html(UI.sheetState)); },
+  refresh() { UI.updateSheet(IntakeSheet.html(UI.sheetState)); Anim.pickPop(); },
 
   /** Ouvre la feuille d'une prise existante. */
   openFor(id, mode) {
@@ -3144,7 +3279,7 @@ const Quiz = {
     App.quiz = null;
     const back = App.quizReturn || '#/aujourdhui';
     App.quizReturn = null;
-    location.hash = back;
+    App.go(back);
   }
 };
 
@@ -3337,7 +3472,7 @@ const Actions = {
     const from = App.route();
     App.quizReturn = from === 'bienvenue' ? '#/aujourdhui' : `#/${from}`;
     App.quiz = Quiz.fromProfile(Store.data.settings.profile, 1);
-    if (location.hash === '#/bienvenue') App.render(); else location.hash = '#/bienvenue';
+    if (location.hash === '#/bienvenue') App.render(); else App.go('#/bienvenue');
   },
   'quiz-next'() {
     App.quiz.step = Math.min(Quiz.STEPS.length - 1, App.quiz.step + 1);
@@ -3376,8 +3511,10 @@ const Actions = {
       d.settings.quitStart = quitStart;
       d.settings.baseline = { ...base, days: st.days };
       d.settings.reduction.on = false;
+      d.settings.seenMilestoneH = 0;
+      d.settings.milestoneShownAt = null;
     });
-    location.hash = '#/aujourdhui';
+    App.go('#/aujourdhui');
     UI.toast('C’est parti. Une journée à la fois.');
   },
   'obs-confirm'() {
@@ -3422,7 +3559,7 @@ const Actions = {
     const d = App.relapseDraft;
     Intakes.add(d.type, Date.now(), d.trigger, d.intensity || null);
     App.relapseDraft = null;
-    location.hash = '#/aujourdhui';
+    App.go('#/aujourdhui');
     UI.toast('Noté. Le compteur repart, ton total reste.');
   },
   'relapse-observation'() {
@@ -3432,14 +3569,14 @@ const Actions = {
     Store.data.settings.phase = 'observation';
     Store.data.settings.quitStart = null;
     Store.save();
-    location.hash = '#/aujourdhui';
+    App.go('#/aujourdhui');
     UI.toast('Noté. Retour en observation, sans pression.');
   },
 
   /* ---- J'ai une envie ---- */
-  'craving-close'() { Craving.clear(); location.hash = '#/aujourdhui'; },
+  'craving-close'() { Craving.clear(); App.go('#/aujourdhui'); },
   'craving-pause'() { Craving.togglePause(); App.render(); },
-  'craving-done'() { Craving.finish(); App.render(); },
+  'craving-done'() { Craving.finish(); App.celebrate = true; App.render(); },
   'craving-trigger'(el) {
     const c = Craving.state();
     c.trigger = c.trigger === el.dataset.value ? null : el.dataset.value;
@@ -3452,16 +3589,16 @@ const Actions = {
     Craving.persist();
     App.render();
   },
-  'craving-save'() { Craving.save(true); location.hash = '#/aujourdhui'; UI.toast('Envie notée. Bien joué.'); },
-  'craving-skip'() { Craving.save(true, false); location.hash = '#/aujourdhui'; },
+  'craving-save'() { Craving.save(true); App.go('#/aujourdhui'); UI.toast('Envie notée. Bien joué.'); },
+  'craving-skip'() { Craving.save(true, false); App.go('#/aujourdhui'); },
   'craving-gave-in'() {
     const ctx = Craving.save(false);
     if (Store.data.settings.phase === 'arret') {
       App.relapseDraft = { type: 'snus', trigger: ctx.trigger, intensity: ctx.intensity };
-      location.hash = '#/reprendre';
+      App.go('#/reprendre');
     } else {
       App.afterRoute = () => IntakeSheet.open({ mode: 'new', id: null, type: 'snus', ts: Date.now(), trigger: ctx.trigger, intensity: ctx.intensity, confirmDelete: false });
-      location.hash = '#/aujourdhui';
+      App.go('#/aujourdhui');
     }
   },
 
@@ -3478,6 +3615,7 @@ const Actions = {
     if (raw !== '' && hr === null) { UI.toast('Fréquence attendue entre 25 et 220 bpm, ou laisse vide.'); return; }
     const entry = { date: d.date, sleep: d.sleep, energy: d.energy, mood: d.mood, anxiety: d.anxiety, hr };
     App.checkinDraft = null;
+    App.celebrate = true;
     Store.update((data) => {
       data.checkins = data.checkins.filter((c) => c.date !== entry.date).concat(entry).sort((a, b) => a.date.localeCompare(b.date));
     });
@@ -3612,7 +3750,7 @@ const Reminders = {
       'DURATION:PT5M',
       'RRULE:FREQ=DAILY',
       'SUMMARY:STASE · check-in du soir',
-      'DESCRIPTION:20 secondes : sommeil\\, énergie\\, humeur\\, anxiété.',
+      'DESCRIPTION:Sommeil\\, énergie\\, humeur\\, anxiété.',
       `URL:${url}`,
       'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:STASE · check-in du soir', 'TRIGGER:PT0M', 'END:VALARM',
       'END:VEVENT', 'END:VCALENDAR', ''
@@ -3692,7 +3830,10 @@ const Update = {
     const go = () => {
       const busy = document.body.classList.contains('sheet-open') || App.route() === 'envie' || App.route() === 'bienvenue';
       if (busy) { setTimeout(go, 1500); return; }
-      UI.toast('Nouvelle version de STASE prête', 'Recharger', () => location.reload(), 9000);
+      UI.toast('Nouvelle version de STASE prête', 'Recharger', () => {
+        try { sessionStorage.setItem('stase.reload', '1'); } catch (e) { /* rien */ }
+        location.reload();
+      }, 9000);
     };
     setTimeout(go, 800);
   }
@@ -3710,6 +3851,8 @@ const App = {
   /** Dernier écran dessiné (anime seulement l'arrivée sur un nouvel écran). */
   renderedRoute: null,
   bumpCounter: false,
+  celebrate: false,
+  lastPick: null,
   /** Check-in en cours de saisie (non enregistré). */
   checkinDraft: null,
   /** Période des stats : 7 ou 30 jours. */
@@ -3744,14 +3887,31 @@ const App = {
       const cur = Calc.streaks(Store.data.intakes, Store.data.settings.quitStart, Date.now()).current;
       set('since-big', Screens.sinceBig(cur));
       set('since-small', Screens.sinceSmall(cur));
+      // Un repère vient d'être franchi, app ouverte : on redessine pour le célébrer.
+      const last = Calc.lastPassed(cur, Calc.visibleMilestones(Store.data.settings, Store.data.intakes));
+      const seen = Store.data.settings.seenMilestoneH;
+      if (last && seen !== null && last.h > seen && !UI.sheetState) App.render();
     }
     if (name === 'envie' && Craving.current && Craving.current.step === 'timer') {
       const c = Craving.current, el = Craving.elapsed(c), v = Craving.view(el, c);
-      if (el >= Craving.DURATION) { Craving.finish(); App.render(); return; }
+      if (el >= Craving.DURATION) { Craving.finish(); App.celebrate = true; App.render(); return; }
       set('craving-phase', v.phase); set('craving-hint', v.hint); set('craving-left', v.left);
       const ring = document.querySelector('[data-live="craving-ring"]');
       if (ring) ring.setAttribute('stroke-dashoffset', v.dash);
     }
+  },
+
+  /** Mémorise le dernier repère atteint (célébré une seule fois, recalé après une prise). */
+  syncMilestone(currentMs) {
+    const st = Store.data.settings;
+    if (st.phase !== 'arret' || App.testMode) return;
+    const last = Calc.lastPassed(currentMs, Calc.visibleMilestones(st, Store.data.intakes));
+    const lastH = last ? last.h : 0;
+    if (lastH === st.seenMilestoneH) return;
+    if (st.seenMilestoneH !== null && lastH > st.seenMilestoneH) { App.celebrate = true; st.milestoneShownAt = Date.now(); }
+    else st.milestoneShownAt = null;
+    st.seenMilestoneH = lastH;
+    Store.save();
   },
 
   /** Après un changement d'écran, VoiceOver part du titre de l'écran. */
@@ -3786,20 +3946,65 @@ const App = {
       console.error(e);
       view.innerHTML = Screens.failure(e);
     }
-    if (name !== App.renderedRoute) Anim.enter(view);
+    if (name !== App.renderedRoute) { Anim.enter(view); if (App.renderedRoute) Anim.tabPop(name); }
     App.renderedRoute = name;
-    if (App.bumpCounter) { App.bumpCounter = false; Anim.bump(view.querySelector('.big-number')); }
+    if (App.bumpCounter) {
+      App.bumpCounter = false;
+      const counter = view.querySelector('.big-number');
+      Anim.bump(counter);
+      Anim.floatText(counter, '+1');
+      const first = view.querySelector('.entry');
+      if (first && !Anim.reduced()) first.classList.add('entry--new');
+    }
+    if (name === 'aujourdhui' && Store.data.settings.phase === 'arret') {
+      App.syncMilestone(Calc.streaks(Store.data.intakes, Store.data.settings.quitStart, Date.now()).current);
+    }
+    if (App.celebrate) { App.celebrate = false; Anim.burst(view.querySelector('.milestone-new .done-mark') || view.querySelector('.done-mark')); }
     document.body.classList.toggle('no-chrome', App.focused.includes(name));
     document.querySelectorAll('.tab').forEach((t) => {
       if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
   },
 
+  /**
+   * Change d'écran sans ajouter d'entrée à l'historique : sur iPhone, le geste
+   * « retour » depuis le bord faisait glisser toute l'app, barre d'onglets comprise.
+   */
+  go(hash) {
+    if (location.hash === hash) { App.onRoute(); return; }
+    if (App.standalone()) location.replace(hash); else location.hash = hash;
+  },
+
+  /** App ouverte depuis l'écran d'accueil (pas de bouton Retour : on n'empile pas l'historique). */
+  standalone() {
+    return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  },
+
+  /** Arrivée sur un écran : nettoyage, rendu, défilement en haut, focus. */
+  onRoute() {
+    App.viewDay = null;
+    if (App.route() !== 'envie' && Craving.current && Craving.current.step === 'log') Craving.clear();
+    if (App.route() !== 'reprendre') App.relapseDraft = null;
+    if (App.route() !== 'bienvenue') App.quiz = null;
+    if (App.route() === 'historique') { App.historyDays = 30; App.historyBack = App.previousRoute === 'historique' ? App.historyBack : App.previousRoute; }
+    App.previousRoute = App.route();
+    UI.closeSheet();
+    App.render();
+    document.getElementById('view').scrollTop = 0;
+    App.focusHeading();
+    if (App.afterRoute) { const fn = App.afterRoute; App.afterRoute = null; fn(); }
+  },
+
   onClick(e) {
+    const link = e.target.closest('a[href^="#/"]');
+    const plain = !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0;
+    if (link && !link.dataset.action) { if (plain) { e.preventDefault(); App.go(link.getAttribute('href')); } return; }
     const el = e.target.closest('[data-action]');
     if (!el || !Actions[el.dataset.action]) return;
     e.preventDefault();
+    App.lastPick = { action: el.dataset.action, value: el.dataset.value, key: el.dataset.key };
     Actions[el.dataset.action](el);
+    Anim.pickPop();
   },
 
   /** Saisie d'un réglage numérique : validée à la sortie du champ. */
@@ -3841,21 +4046,14 @@ const App = {
       navigator.storage.persist().then((ok) => { App.persisted = ok; }).catch(() => {});
     }
     document.addEventListener('click', App.onClick);
+    // Rien ne se fait glisser hors des zones qui défilent (barre d'onglets, fond de feuille…).
+    // Le zoom à deux doigts reste toujours possible (accessibilité).
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && !e.target.closest('#view, .sheet')) e.preventDefault();
+    }, { passive: false });
     document.addEventListener('change', App.onChange);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) UI.closeSheet(); });
-    window.addEventListener('hashchange', () => {
-      App.viewDay = null;
-      if (App.route() !== 'envie' && Craving.current && Craving.current.step === 'log') Craving.clear();
-      if (App.route() !== 'reprendre') App.relapseDraft = null;
-      if (App.route() !== 'bienvenue') App.quiz = null;
-      if (App.route() === 'historique') { App.historyDays = 30; App.historyBack = App.previousRoute === 'historique' ? App.historyBack : App.previousRoute; }
-      App.previousRoute = App.route();
-      UI.closeSheet();
-      App.render();
-      document.getElementById('view').scrollTop = 0;
-      App.focusHeading();
-      if (App.afterRoute) { const fn = App.afterRoute; App.afterRoute = null; fn(); }
-    });
+    window.addEventListener('hashchange', App.onRoute);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) App.checkDayChange(); });
     setInterval(App.checkDayChange, 30000);
     setInterval(App.tick, 1000);
@@ -3873,6 +4071,10 @@ const App = {
     // Premier lancement : questionnaire de départ (une seule fois, passable).
     const s = Store.data.settings;
     if (!s.profile.done && !Store.data.intakes.length && !location.hash) history.replaceState(null, '', '#/bienvenue');
+    // Écran d'ouverture : pas après un « Recharger » de mise à jour ni sur une envie en cours.
+    let reloaded = false;
+    try { reloaded = sessionStorage.getItem('stase.reload') === '1'; sessionStorage.removeItem('stase.reload'); } catch (e) { /* rien */ }
+    if (!reloaded && App.route() !== 'envie') Anim.splash();
     App.render();
   }
 };
@@ -4519,6 +4721,22 @@ Tests.add('rappel calendrier : événement quotidien avec alerte, lignes CRLF', 
 Tests.add('réglage de rappel : valeur invalide remplacée', () => {
   const d = Store.normalize({ settings: { reminder: { checkinTime: '99:99', inApp: false } } });
   Tests.eq(d.settings.reminder, { checkinTime: '21:00', inApp: false, snoozeDate: null });
+});
+
+/* ---- Version finale : repères célébrés ---- */
+Tests.add('nouveau repère : célébré une fois, recalé après une prise', () => {
+  const H = 3600000;
+  Tests.eq(Calc.newMilestone(80 * H, MILESTONES, 24).title, '3 jours');
+  Tests.eq(Calc.newMilestone(80 * H, MILESTONES, 72), null);
+  Tests.eq(Calc.newMilestone(0.5 * H, MILESTONES, 0), null);
+  Tests.eq(Calc.newMilestone(2 * H, MILESTONES, 0).title, '1 heure');
+});
+
+Tests.add('repères : données d’avant la 2.0, rien de célébré après coup', () => {
+  Tests.eq(Calc.newMilestone(40 * DAY_MS, MILESTONES, null), null);
+  Tests.eq(Store.normalize({ settings: {} }).settings.seenMilestoneH, null);
+  Tests.eq(Calc.lastPassed(40 * DAY_MS, MILESTONES).title, '1 mois');
+  Tests.eq(Calc.lastPassed(0, MILESTONES), null);
 });
 
 App.boot();

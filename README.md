@@ -1,5 +1,7 @@
 # STASE
 
+**Version 2.0 (version finale)**
+
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
 **En ligne :** https://h9r9zwh7ym-arch.github.io/STASE/ (GitHub Pages, branche `main`, dossier racine)
