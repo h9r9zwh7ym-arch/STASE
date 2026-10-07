@@ -285,6 +285,12 @@ body.no-chrome .tabbar, body.no-chrome .fab { display: none; }
 .dots span.on { background: var(--warm); }
 input[type="datetime-local"] { width: 100%; border: 0; outline: none; background: transparent; font-family: var(--font-num); font-size: 16px; min-height: 44px; }
 
+/* Check-in et corrélation */
+.done-mark { width: 40px; height: 40px; border-radius: 20px; background: var(--mint-dim); color: var(--mint); display: flex; align-items: center; justify-content: center; }
+.corr { display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 12px 8px; align-items: center; font-size: 15px; }
+.corr .num { font-size: 18px; font-weight: 600; text-align: center; }
+.corr > .tiny { text-align: center; }
+
 /* Graphes SVG */
 .chart { display: block; width: 100%; height: auto; overflow: visible; }
 .chart text { font-family: var(--font-text); }
@@ -703,6 +709,74 @@ const Calc = {
   }
 };
 
+/* ---- Calc : check-in et corrélation ---- */
+const CHECKIN_METRICS = [
+  // clé, libellé, bas → haut, sens du « mieux »
+  { key: 'sleep', label: 'Sommeil', lo: 'agité', hi: 'reposant', better: 'up' },
+  { key: 'energy', label: 'Énergie', lo: 'à plat', hi: 'en forme', better: 'up' },
+  { key: 'mood', label: 'Humeur', lo: 'basse', hi: 'bonne', better: 'up' },
+  { key: 'anxiety', label: 'Anxiété', lo: 'calme', hi: 'forte', better: 'down' }
+];
+const CORRELATION_MIN_DAYS = 7;
+
+Object.assign(Calc, {
+  /**
+   * Jour auquel rattacher un check-in : avant 4 h du matin, il compte
+   * pour la veille (le check-in « du soir » fait juste après minuit).
+   */
+  checkinDayFor(ts) {
+    const d = new Date(ts);
+    return d.getHours() < 4 ? Dates.addDays(Dates.dayKey(ts), -1) : Dates.dayKey(ts);
+  },
+
+  mean(values) {
+    const v = values.filter((x) => Number.isFinite(x));
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+  },
+
+  /**
+   * Compare les check-ins des jours les moins et les plus chargés.
+   * Les jours sont triés par nombre de prises puis coupés en deux moitiés
+   * (le jour du milieu est écarté si leur nombre est impair).
+   * Renvoie { enough:false, days } sous CORRELATION_MIN_DAYS jours,
+   * { enough:true, flat:true } si la consommation ne varie pas.
+   */
+  correlation(intakes, checkins, minDays = CORRELATION_MIN_DAYS) {
+    if (!intakes.length) return { enough: false, days: 0 };
+    const first = Dates.dayKey(intakes[0].ts);
+    const today = Dates.todayKey();
+    const counts = {};
+    intakes.forEach((x) => { const k = Dates.dayKey(x.ts); counts[k] = (counts[k] || 0) + 1; });
+    const pairs = checkins
+      .filter((c) => c.date >= first && c.date <= today)
+      .map((c) => ({ ...c, total: counts[c.date] || 0 }))
+      .sort((a, b) => a.total - b.total || a.date.localeCompare(b.date));
+    if (pairs.length < minDays) return { enough: false, days: pairs.length };
+    const half = Math.floor(pairs.length / 2);
+    const low = pairs.slice(0, half), high = pairs.slice(pairs.length - half);
+    const lowMax = low[low.length - 1].total, highMin = high[0].total;
+    if (lowMax === highMin && low[0].total === high[high.length - 1].total) return { enough: true, flat: true, days: pairs.length };
+    const avg = (list, k) => Calc.mean(list.map((p) => p[k]));
+    return {
+      enough: true, flat: false, days: pairs.length,
+      low: { days: low.length, intakes: avg(low, 'total') },
+      high: { days: high.length, intakes: avg(high, 'total') },
+      metrics: CHECKIN_METRICS.map((m) => {
+        const l = avg(low, m.key), h = avg(high, m.key);
+        return { ...m, low: l, high: h, diff: l !== null && h !== null ? h - l : null };
+      })
+    };
+  },
+
+  /** Phrase sobre pour un écart (seuil : un demi-point sur 5). */
+  describeDiff(m) {
+    if (m.diff === null) return 'pas assez de réponses';
+    if (Math.abs(m.diff) < 0.5) return 'à peu près pareil';
+    const higher = m.diff > 0;
+    return `${higher ? 'plus haut' : 'plus bas'} les jours chargés`;
+  }
+});
+
 /* ---- Calc : statistiques ---- */
 Object.assign(Calc, {
   /** Nombre de prises par heure locale (0 à 23). */
@@ -1078,6 +1152,7 @@ const Screens = {
       ${Screens.statsDaily(intakes, from, today, n, avg)}
       ${Screens.statsHours(inRange)}
       ${Screens.statsTriggers(inRange)}
+      ${Screens.correlationCard()}
       ${Screens.statsSpend(intakes, today)}
       ${Screens.statsNicotine(avg, inRange)}
     </div>`;
@@ -1183,7 +1258,78 @@ const Screens = {
     </div>`;
   },
   corps() { return Screens.placeholder('Corps', 6); },
-  checkin() { return Screens.placeholder('Ce soir', 4); },
+  /** Check-in du soir : 4 échelles + FC facultative, puis récapitulatif. */
+  checkin() {
+    const day = Calc.checkinDayFor(Date.now());
+    const isToday = day === Dates.todayKey();
+    const existing = Store.data.checkins.find((c) => c.date === day);
+    const editing = App.checkinDraft && App.checkinDraft.date === day;
+    const title = isToday ? 'Ce soir' : 'Hier soir';
+    const sub = isToday ? 'Quatre touches, vingt secondes.' : `Check-in du ${Dates.formatDayLong(Dates.keyToStart(day)).toLowerCase()}.`;
+    return `<div class="screen">
+      <header class="stack" style="gap:6px"><h1 class="title">${title}</h1><span class="small muted">${Util.esc(sub)}</span></header>
+      ${existing && !editing ? Screens.checkinDone(existing) : Screens.checkinForm(day, existing)}
+      ${Screens.correlationCard()}
+    </div>`;
+  },
+
+  checkinForm(day, existing) {
+    if (!App.checkinDraft || App.checkinDraft.date !== day) {
+      App.checkinDraft = existing ? { ...existing, hr: existing.hr ?? '' } : { date: day, sleep: null, energy: null, mood: null, anxiety: null, hr: '' };
+    }
+    const d = App.checkinDraft;
+    const complete = CHECKIN_METRICS.every((m) => d[m.key]);
+    return `${CHECKIN_METRICS.map((m) => `
+      <div class="stack" role="group" aria-label="${m.label}" style="gap:8px">
+        <div class="row" style="align-items:baseline"><span style="font-size:15px;font-weight:700">${m.label}</span>
+          <span class="tiny faint">${m.lo} → ${m.hi}</span></div>
+        <div class="grid-5">${[1, 2, 3, 4, 5].map((n) =>
+          `<button type="button" class="scale-btn" style="height:48px" data-action="ci-pick" data-key="${m.key}" data-value="${n}"
+            aria-pressed="${d[m.key] === n}" aria-label="${m.label} ${n} sur 5">${n}</button>`).join('')}</div>
+      </div>`).join('')}
+      <label class="stack" style="gap:8px">
+        <span style="font-size:15px;font-weight:700">Fréquence cardiaque au repos <span class="faint" style="font-weight:500">· facultatif</span></span>
+        <span class="field__box" style="width:100%"><input type="text" inputmode="numeric" data-ci="hr" placeholder="—"
+          value="${Util.esc(d.hr ?? '')}" style="text-align:left" autocomplete="off"><span class="field__unit">bpm</span></span>
+      </label>
+      <button type="button" class="btn btn--primary btn--block" data-action="ci-submit" ${complete ? '' : 'disabled'}>Valider</button>`;
+  },
+
+  checkinDone(c) {
+    const items = CHECKIN_METRICS.map((m) => `<span>${m.label} <strong class="num">${c[m.key]}</strong></span>`).join('<span class="faint">·</span>');
+    return `<section class="card" style="gap:10px;padding:24px 22px">
+      <span class="done-mark">${Icon.check}</span>
+      <span class="value" style="font-size:22px;font-weight:600">Noté. Bonne soirée.</span>
+      <p class="small muted" style="display:flex;flex-wrap:wrap;gap:6px">${items}${c.hr ? `<span class="faint">·</span><span>FC <strong class="num">${c.hr}</strong> bpm</span>` : ''}</p>
+      <button type="button" class="link link--mint" data-action="ci-edit" style="align-self:flex-start">Modifier</button>
+    </section>`;
+  },
+
+  /** Carte de corrélation (Check-in et Stats). */
+  correlationCard() {
+    const r = Calc.correlation(Store.data.intakes, Store.data.checkins);
+    const head = '<span class="small muted">Ton corps et ta consommation</span>';
+    if (!r.enough) {
+      const left = CORRELATION_MIN_DAYS - r.days;
+      return `<section class="card card--outline" style="gap:8px">${head}
+        <p class="small">Pas encore assez de données : ${r.days} jour${r.days > 1 ? 's' : ''} avec check-in sur ${CORRELATION_MIN_DAYS}.
+        Encore ${left} soir${left > 1 ? 's' : ''} et STASE pourra comparer ton sommeil, ton humeur et ton anxiété selon tes jours plus ou moins chargés.</p>
+      </section>`;
+    }
+    if (r.flat) {
+      return `<section class="card card--outline" style="gap:8px">${head}
+        <p class="small">Ta consommation est la même presque tous les jours sur la période : impossible de comparer pour l'instant.</p></section>`;
+    }
+    const fmt = (v) => (v === null ? '—' : Util.formatNum(v, 1));
+    return `<section class="card" style="gap:14px">${head}
+      <div class="corr">
+        <span></span><span class="tiny faint">Jours légers<br>≈ ${fmt(r.low.intakes)} prises</span><span class="tiny faint">Jours chargés<br>≈ ${fmt(r.high.intakes)} prises</span>
+        ${r.metrics.map((m) => `<span>${m.label}<br><span class="tiny faint">${Calc.describeDiff(m)}</span></span>
+          <span class="num">${fmt(m.low)}</span><span class="num">${fmt(m.high)}</span>`).join('')}
+      </div>
+      <p class="tiny faint">Moyennes sur 5, à partir de ${r.days} jours (${r.low.days} légers, ${r.high.days} chargés). C'est une tendance, pas une preuve : le lien peut aller dans les deux sens, une mauvaise nuit peut aussi donner plus envie.</p>
+    </section>`;
+  },
   envie() {
     return `<div class="screen">
       <header class="header"><span class="label" style="color:var(--warm)">Envie en cours</span>
@@ -1468,6 +1614,30 @@ const Actions = {
   /* ---- Stats ---- */
   'stats-range'(el) { App.statsRange = Number(el.dataset.value); App.render(); },
 
+  /* ---- Check-in ---- */
+  'ci-pick'(el) {
+    App.checkinDraft[el.dataset.key] = Number(el.dataset.value);
+    App.render();
+  },
+  'ci-submit'() {
+    const d = App.checkinDraft;
+    const input = document.querySelector('[data-ci="hr"]');
+    const raw = input ? input.value.trim() : String(d.hr ?? '');
+    const hr = raw === '' ? null : Util.clampInt(Util.parseNum(raw), 25, 220);
+    if (raw !== '' && hr === null) { UI.toast('Fréquence attendue entre 25 et 220 bpm, ou laisse vide.'); return; }
+    const entry = { date: d.date, sleep: d.sleep, energy: d.energy, mood: d.mood, anxiety: d.anxiety, hr };
+    App.checkinDraft = null;
+    Store.update((data) => {
+      data.checkins = data.checkins.filter((c) => c.date !== entry.date).concat(entry).sort((a, b) => a.date.localeCompare(b.date));
+    });
+  },
+  'ci-edit'() {
+    const day = Calc.checkinDayFor(Date.now());
+    const c = Store.data.checkins.find((x) => x.date === day);
+    App.checkinDraft = { ...c, hr: c.hr ?? '' };
+    App.render();
+  },
+
   /* ---- Démo ---- */
   'demo-ask'() {
     UI.openSheet(`
@@ -1541,11 +1711,13 @@ const Backup = {
     if (!Backup.pending) return;
     Store.replaceAll(Backup.pending);
     Backup.pending = null;
+    App.checkinDraft = null;
+    App.viewDay = null;
     UI.closeSheet();
     UI.applyTheme();
     App.render();
     UI.toast(message, 'Annuler', () => {
-      if (Store.restoreBackup()) { UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
+      if (Store.restoreBackup()) { App.checkinDraft = null; UI.applyTheme(); App.render(); UI.toast('Import annulé.'); }
     }, 8000);
   }
 };
@@ -1556,6 +1728,8 @@ const Backup = {
 const App = {
   routes: ['aujourdhui', 'stats', 'corps', 'checkin', 'reglages', 'envie'],
   testMode: false,
+  /** Check-in en cours de saisie (non enregistré). */
+  checkinDraft: null,
   /** Période des stats : 7 ou 30 jours. */
   statsRange: 7,
   /** Jour affiché sur « Aujourd'hui » (null = aujourd'hui). */
@@ -1609,6 +1783,7 @@ const App = {
       input.value = '';
       return;
     }
+    if (input.dataset.ci === 'hr' && App.checkinDraft) { App.checkinDraft.hr = input.value.trim(); return; }
     if (input.dataset.sheet === 'ts' && UI.sheetState) {
       const ts = Dates.fromInputValue(input.value);
       if (ts !== null) UI.sheetState.ts = ts;
@@ -1841,6 +2016,54 @@ Tests.add('graphe : une barre par valeur, rendu sans erreur', () => {
   Tests.eq((svg.match(/<rect/g) || []).length, 3);
   Tests.eq(svg.includes('c-avg'), true);
   Tests.eq((Charts.hbars([{ label: 'Café', pct: 50 }]).match(/<rect/g) || []).length, 2);
+});
+
+/* ---- Étape 4 : check-in et corrélation ---- */
+Tests.add('check-in après minuit rattaché à la veille', () => {
+  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 0, 30).getTime()), '2026-10-07');
+  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 3, 59).getTime()), '2026-10-07');
+  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 8, 4, 0).getTime()), '2026-10-08');
+  Tests.eq(Calc.checkinDayFor(new Date(2026, 9, 7, 22, 0).getTime()), '2026-10-07');
+});
+Tests.add('corrélation : message honnête sous 7 jours', () => {
+  const base = Date.now() - 20 * DAY_MS;
+  const intakes = [{ type: 'snus', ts: base }];
+  const checkins = [...Array(6)].map((_, i) => ({ date: Dates.dayKey(base + (i + 1) * DAY_MS), sleep: 3, energy: 3, mood: 3, anxiety: 3 }));
+  Tests.eq(Calc.correlation(intakes, checkins), { enough: false, days: 6 });
+  Tests.eq(Calc.correlation([], checkins), { enough: false, days: 0 });
+});
+Tests.add('corrélation : moitiés légère et chargée', () => {
+  const start = Dates.addDays(Dates.todayKey(), -10);
+  const intakes = [], checkins = [];
+  // 8 jours : 4 légers (2 prises, sommeil 4, anxiété 2), 4 chargés (10 prises, sommeil 2, anxiété 4)
+  for (let i = 0; i < 8; i++) {
+    const key = Dates.addDays(start, i);
+    const heavy = i % 2 === 1;
+    for (let k = 0; k < (heavy ? 10 : 2); k++) intakes.push({ type: 'vape', ts: Dates.keyToStart(key) + (10 + k) * 60000 });
+    checkins.push({ date: key, sleep: heavy ? 2 : 4, energy: 3, mood: heavy ? 3 : 3.2, anxiety: heavy ? 4 : 2 });
+  }
+  intakes.sort((a, b) => a.ts - b.ts);
+  const r = Calc.correlation(intakes, checkins);
+  Tests.eq(r.enough, true);
+  Tests.eq(r.flat, false);
+  Tests.eq([r.low.days, r.high.days], [4, 4]);
+  Tests.near(r.low.intakes, 2);
+  Tests.near(r.high.intakes, 10);
+  const by = Object.fromEntries(r.metrics.map((m) => [m.key, m]));
+  Tests.near(by.sleep.diff, -2);
+  Tests.near(by.anxiety.diff, 2);
+  Tests.eq(Calc.describeDiff(by.sleep), 'plus bas les jours chargés');
+  Tests.eq(Calc.describeDiff(by.mood), 'à peu près pareil');
+});
+Tests.add('corrélation : consommation constante = pas de comparaison', () => {
+  const start = Dates.addDays(Dates.todayKey(), -9);
+  const intakes = [], checkins = [];
+  for (let i = 0; i < 7; i++) {
+    const key = Dates.addDays(start, i);
+    intakes.push({ type: 'snus', ts: Dates.keyToStart(key) + 3600000 });
+    checkins.push({ date: key, sleep: 3, energy: 3, mood: 3, anxiety: 3 });
+  }
+  Tests.eq(Calc.correlation(intakes, checkins).flat, true);
 });
 
 App.boot();
