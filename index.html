@@ -506,7 +506,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -3473,6 +3473,59 @@ const Backup = {
 };
 
 /* =========================================================================
+   Update — recherche de mise à jour (repris de ZESTE et ASCEN)
+   Le service worker (sw.js, à côté d'index.html) ouvre l'app depuis une copie
+   locale et télécharge la nouvelle version en arrière-plan. Quand elle a changé,
+   il prévient la page : on propose de recharger. Vérifié à l'ouverture et au
+   retour au premier plan (au plus toutes les 30 minutes). Pas de service worker
+   en fichier local ni sur claude.ai (aperçus, tests).
+   ========================================================================= */
+const Update = {
+  shown: false,
+  lastCheck: 0,
+  INTERVAL: 30 * 60000,
+
+  supported() {
+    return 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')
+      && !/claude\.ai|claudeusercontent/.test(location.hostname);
+  },
+
+  init() {
+    if (!Update.supported()) return;
+    try {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.type === 'stase-updated') Update.ready(); });
+      Update.check();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && Date.now() - Update.lastCheck >= Update.INTERVAL) Update.check();
+      });
+    } catch (e) { /* jamais bloquant */ }
+  },
+
+  /** Demande au service worker de revérifier la page principale (sans effet hors réseau). */
+  check() {
+    if (!navigator.onLine) return;
+    Update.lastCheck = Date.now();
+    navigator.serviceWorker.ready.then((r) => {
+      if (r.active) r.active.postMessage({ type: 'stase-check' });
+      r.update().catch(() => {});
+    }).catch(() => {});
+  },
+
+  /** Nouvelle version prête : on attend un moment calme (pas de feuille, pas d'envie en cours). */
+  ready() {
+    if (Update.shown) return;
+    Update.shown = true;
+    const go = () => {
+      const busy = document.body.classList.contains('sheet-open') || App.route() === 'envie' || App.route() === 'bienvenue';
+      if (busy) { setTimeout(go, 1500); return; }
+      UI.toast('Nouvelle version de STASE prête', 'Recharger', () => location.reload(), 9000);
+    };
+    setTimeout(go, 800);
+  }
+};
+
+/* =========================================================================
    App — routage par #hash et rendu
    ========================================================================= */
 const App = {
@@ -3636,6 +3689,7 @@ const App = {
       if (!UI.sheetState) App.render();
     });
     window.addEventListener('error', () => UI.toast('Un petit souci est survenu. Tes données sont intactes.'));
+    Update.init();
     // Une envie en cours avant un rechargement d'iOS : on y revient.
     if (Craving.restore() && (!location.hash || location.hash === '#/aujourdhui')) history.replaceState(null, '', '#/envie');
     // Premier lancement : questionnaire de départ (une seule fois, passable).

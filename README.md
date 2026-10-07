@@ -36,7 +36,7 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 
 ## Développement
 
-Un seul fichier, `index.html` : HTML, CSS et JavaScript sans framework, sans build, polices intégrées.
+`index.html` contient toute l'app (HTML, CSS et JavaScript sans framework, sans build, polices intégrées). `sw.js`, à côté, est le service worker repris de ZESTE et ASCEN : l'app s'ouvre depuis une copie locale (même hors réseau), télécharge la nouvelle version en arrière-plan et propose « Recharger » quand elle a changé. Il ne s'active qu'en HTTPS (GitHub Pages) ou sur `localhost`.
 
 - **Lancer sur Mac** : ouvrir `index.html` dans Safari ou Chrome (vue mobile des outils développeur), ou `python3 -m http.server` puis http://localhost:8000.
 - **Tester sur iPhone sans publier** : `python3 -m http.server` sur le Mac, puis `http://<IP-du-Mac>:8000` sur l'iPhone (même Wi-Fi).
@@ -46,5 +46,5 @@ Organisation du script, dans l'ordre : `Util`, `Dates`, `Store` (stockage, migra
 
 ## Limites connues
 
-- Sans service worker (contrainte « un seul fichier »), le **premier chargement** de l'app demande du réseau ; ensuite Safari la garde souvent en cache, sans garantie.
+- Le **tout premier chargement** demande du réseau ; ensuite l'app s'ouvre depuis sa copie locale.
 - Les repères santé et les bénéfices sont des **tendances générales**, pas un avis médical.
