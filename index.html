@@ -439,6 +439,8 @@ details.benefit[open] .benefit__more { display: none; }
 .faq[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
 .faq__body { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.55; color: var(--text-2); }
 .faq__body strong { color: var(--text); }
+.fold__body { gap: 14px; }
+.fold summary { min-height: 52px; }
 
 /* Stepper ml */
 .stepper { display: flex; align-items: center; gap: 2px; flex: none; }
@@ -614,7 +616,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -635,7 +637,8 @@ const FIELD_LIMITS = {
   vapeUnitPrice: { max: 500, label: 'un prix' },
   vapeMlPerUnit: { max: 1000, label: 'une contenance en ml' },
   vapeMgPerMl: { max: 100, label: 'un taux en mg/ml' },
-  vapeSessionsPerUnit: { max: 5000, label: 'un nombre de sessions' }
+  vapeSessionsPerUnit: { max: 5000, label: 'un nombre de sessions' },
+  goalPrice: { max: 100000, label: 'un prix d’objectif' }
 };
 const INTAKE_TYPES = ['snus', 'vape'];
 
@@ -763,6 +766,8 @@ const Store = {
         theme: 'dark',               // 'dark' | 'light'
         askContext: true,            // ouvrir la feuille contexte après « + Snus / + Vape »
         profile: { done: false, uses: null, goals: [], concerns: [], firstUse: null, why: '' }, // questionnaire de départ
+        goalName: '',                // objectif d'achat (« Vélo »), rempli par l'argent économisé
+        goalPrice: 0,                // son prix en CHF ; 0 = pas d'objectif
         lastExportAt: null,
         backupSnoozeUntil: null      // « Plus tard » sur le rappel de sauvegarde
       },
@@ -823,6 +828,7 @@ const Store = {
     s.milestoneShownAt = Store.tsOrNull(s.milestoneShownAt, now + DAY_MS);
     if (!['capsule', 'flacon'].includes(s.vapeFormat)) s.vapeFormat = 'capsule';
     s.askContext = s.askContext !== false;
+    s.goalName = typeof s.goalName === 'string' ? s.goalName.trim().slice(0, 40) : '';
     s.seenMilestoneH = s.seenMilestoneH !== null && Number.isFinite(Number(s.seenMilestoneH)) && s.seenMilestoneH >= 0 ? Number(s.seenMilestoneH) : null;
 
     s.quitStart = Store.tsOrNull(s.quitStart, Date.now() + DAY_MS);
@@ -1022,6 +1028,19 @@ Calc.mean = function (values) {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 };
 
+/* ---- Calc : objectif d'achat ---- */
+/**
+ * Progression de l'objectif d'achat avec l'argent économisé.
+ * null si aucun objectif (nom vide ou prix nul) ; money null = économies inconnues.
+ */
+Calc.goal = function (settings, money) {
+  const name = settings.goalName, price = Number(settings.goalPrice);
+  if (!name || !(price > 0)) return null;
+  const saved = Math.max(0, money || 0);
+  const ratio = Math.min(1, saved / price);
+  return { name, price, saved, ratio, pct: Math.floor(ratio * 100), done: saved >= price, left: Math.max(0, price - saved) };
+};
+
 /* ---- Calc : raisons d'arrêter (écran « J'ai une envie ») ---- */
 /**
  * Ce qui motive, pour tenir pendant une envie : ta phrase à toi, tes progrès,
@@ -1035,7 +1054,8 @@ Calc.reasons = function (data, now = Date.now()) {
     const d = Dates.splitDuration(cur);
     out.push({ title: 'Déjà', text: `${d.d ? `${d.d} j ${d.h} h` : `${d.h} h ${d.m} min`} sans nicotine. Ne laisse pas une envie de quelques minutes effacer ça.` });
     const av = Calc.avoided(data.intakes, s, now, data.vapeMl);
-    if (av.money) out.push({ title: 'Ton argent', text: `${Util.formatMoney(av.money)} déjà économisés depuis l’arrêt.` });
+    const g = Calc.goal(s, av.money);
+    if (av.money) out.push({ title: 'Ton argent', text: `${Util.formatMoney(av.money)} déjà économisés depuis l’arrêt.${g ? (g.done ? ` De quoi t’offrir : ${g.name}.` : ` Déjà ${g.pct} % de ton objectif : ${g.name}.`) : ''}` });
     const tr = data.cravings.filter((c) => c.resolved && c.ts >= s.quitStart).length;
     if (tr) out.push({ title: 'Tu sais faire', text: `${tr} envie${tr > 1 ? 's' : ''} déjà traversée${tr > 1 ? 's' : ''}. Celle-ci passera aussi.` });
   } else {
@@ -2419,6 +2439,8 @@ const Screens = {
         <p>Rien n'est remis à zéro. Le compteur repart de ta dernière prise, mais ton total de jours sans nicotine et ton meilleur enchaînement restent. La plupart des gens arrêtent après plusieurs essais.</p>`)}
       ${q('Réduction progressive', `
         <p>En observation, tu peux te fixer une cible qui baisse chaque semaine (0,5, 1 ou 2 prises par jour en moins). Dépasser la cible n'est qu'un repère, jamais un échec.</p>`)}
+      ${q('Objectif d’achat', `
+        <p>Dans Réglages, indique ce que tu veux t'offrir et son prix. En mode arrêt, l'argent économisé le remplit sur l'écran Aujourd'hui, et il est rappelé quand tu as une envie.</p>`)}
       ${q('Comment sont calculés les chiffres', `
         <p><strong>Coût d'un snus</strong> : prix de la boîte ÷ portions. <strong>Vape</strong> : ml × prix du ml les jours où tu notes les ml, sinon sessions × prix d'une session.</p>
         <p><strong>Économies et doses évitées</strong> : ce que ta référence prévoyait depuis l'arrêt, moins ce que tu as réellement pris. Jamais négatif.</p>
@@ -2515,6 +2537,7 @@ const Screens = {
             ? `<span class="value">${Util.formatNum(av.vape.ml, 1)} <span style="font-size:18px">ml</span></span><span class="tiny faint">${av.vape.avoided} session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`
             : `<span class="value">${av.vape.avoided}</span><span class="tiny faint">session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`}</div>
       </div>
+      ${Screens.goalProgress(st, av.money)}
       ${av.nicotineMg ? `<p class="small muted" style="margin-top:-8px">≈ <span class="num" style="color:var(--text)">${Util.formatNum(av.nicotineMg, 0)} mg</span> de nicotine évités (teneur des portions et du liquide).</p>` : ''}
       ${st.baseline ? '' : '<p class="small muted">Pas de référence : indique ta consommation habituelle dans <a class="link--mint" href="#/reglages">Réglages</a> pour calculer économies et doses évitées.</p>'}
 
@@ -2530,6 +2553,20 @@ const Screens = {
         <a class="link" href="#/historique">Historique</a>
       </div>
     </div>`;
+  },
+
+  /** Carte « Objectif » : l'argent économisé remplit l'achat choisi dans Réglages. */
+  goalProgress(st, money) {
+    const g = Calc.goal(st, money);
+    if (!g) return '';
+    return `<a class="card goal${g.done ? ' card--featured goal--done' : ''}" href="#/reglages" style="gap:10px;text-decoration:none;color:inherit">
+      <div class="row" style="align-items:baseline"><span class="small"><span class="muted">Objectif · </span><strong>${Util.esc(g.name)}</strong></span>
+        <span class="num" style="color:var(--mint);font-weight:600">${!g.pct && g.saved > 0 ? '< 1' : g.pct} %</span></div>
+      <div class="progress"><span style="width:${(g.ratio * 100).toFixed(1)}%"></span></div>
+      <span class="tiny faint">${g.done
+        ? `Objectif atteint : ${Util.formatMoney(g.price)} économisés. Tu peux te l’offrir.`
+        : `${Util.formatMoney(g.saved)} sur ${Util.formatMoney(g.price)} · encore ${Util.formatMoney(g.left)}`}</span>
+    </a>`;
   },
 
   sinceBig(ms) { const d = Dates.splitDuration(ms); return d.d ? `${d.d} j ${d.h} h` : `${d.h} h`; },
@@ -3132,8 +3169,7 @@ const Screens = {
       </section>
       ${Screens.systemsCard(streak.current, true)}
       ${Screens.forYou('Pour toi')}
-      <h2 class="label">Repères</h2>
-      ${Screens.timeline(states)}
+      ${Screens.fold(`Repères · ${states.filter((m) => m.state === 'done').length} sur ${states.length}`, Screens.timeline(states))}
       ${hadIntake ? '<p class="small muted">Les repères repartent de ta dernière prise, mais ton total de jours sans nicotine reste dans Stats.</p>' : ''}
       ${Screens.corpsNote()}
     </div>`;
@@ -3164,6 +3200,15 @@ const Screens = {
 
   /** « Ton corps récupère » : un système par ligne, avec sa progression (ou ce qui t'attend). */
   systemsCard(currentMs, started) {
+    return Screens.fold(started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt', Screens.systemsBody(currentMs, started));
+  },
+
+  /** Bloc repliable de Corps (fermé par défaut : la page reste courte). */
+  fold(title, body) {
+    return `<details class="faq fold"><summary><span class="label" style="color:var(--mint)">${title}</span></summary><div class="faq__body fold__body">${body}</div></details>`;
+  },
+
+  systemsBody(currentMs, started) {
     const usage = Calc.usage(Store.data.settings, Store.data.intakes);
     const rows = Calc.forUsage(SYSTEMS, usage).map((sys) => {
       const p = started ? Calc.systemProgress(currentMs, sys) : 0;
@@ -3175,11 +3220,7 @@ const Screens = {
         <span class="tiny faint">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
       </div>`;
     }).join('');
-    return `<section class="card" style="gap:14px">
-      <span class="label" style="color:var(--mint)">${started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt'}</span>
-      ${rows}
-      <p class="tiny faint">Durées indicatives : chacun récupère à son rythme.</p>
-    </section>`;
+    return `${rows}<p class="tiny faint">Durées indicatives : chacun récupère à son rythme.</p>`;
   },
 
   corpsNote() {
@@ -3226,8 +3267,7 @@ const Screens = {
       </section>
       ${Screens.systemsCard(0, false)}
       ${Screens.forYou('Ce que l’arrêt peut t’apporter')}
-      <h2 class="label">Repères après l'arrêt</h2>
-      ${Screens.timeline(list.map((m) => ({ ...m, state: 'future' })))}
+      ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))))}
       <section class="card card--empty" style="gap:10px">
         <strong>Rien ne presse.</strong>
         <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu le sens, passe en mode arrêt : cette page suivra ta récupération, heure après heure.</span>
@@ -3258,6 +3298,15 @@ const Screens = {
         </div>
         <label class="stack" style="gap:6px;padding:12px 0"><span class="field__label"><span>Ta raison d’arrêter</span><span class="tiny faint">Elle s’affiche quand tu as une envie</span></span>
           <span class="field__box" style="width:100%"><input type="text" data-profile="why" maxlength="140" value="${Util.esc(s.profile.why)}" placeholder="En une phrase (facultatif)" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>
+        </div>
+      </section>
+
+      <section class="stack">
+        <h2 class="label">Objectif d’achat</h2>
+        <div class="group">
+          <label class="stack" style="gap:6px;padding:12px 0"><span class="field__label"><span>Ce que tu veux t’offrir</span><span class="tiny faint">${s.phase === 'arret' ? 'L’argent économisé le remplit, sur l’écran Aujourd’hui' : 'Il se remplira avec l’argent économisé, une fois en mode arrêt'}</span></span>
+            <span class="field__box" style="width:100%"><input type="text" data-goal="name" maxlength="40" value="${Util.esc(s.goalName)}" placeholder="Un vélo, un week-end… (facultatif)" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>
+          ${Screens.field('goalPrice', 'Prix', s.goalPrice, 'CHF', 'decimal')}
         </div>
       </section>
 
@@ -4209,6 +4258,7 @@ const App = {
     }
     if (input.dataset.ml) { Vape.setMl(input.dataset.ml, Vape.parse(input.value)); return; }
     if (input.dataset.quiz === 'why' && App.quiz) { App.quiz.a.why = input.value.trim().slice(0, 140); return; }
+    if (input.dataset.goal === 'name') { Store.update((d) => { d.settings.goalName = input.value.trim().slice(0, 40); }); return; }
     if (input.dataset.profile === 'why') { Store.update((d) => { d.settings.profile.why = input.value.trim().slice(0, 140); }); return; }
     if (input.dataset.sheet === 'ts' && UI.sheetState) {
       const ts = Dates.fromInputValue(input.value);
@@ -4840,6 +4890,26 @@ Tests.add('repères : données d’avant la 2.0, rien de célébré après coup'
   Tests.eq(Store.normalize({ settings: {} }).settings.seenMilestoneH, null);
   Tests.eq(Calc.lastPassed(40 * DAY_MS, MILESTONES).title, '1 mois');
   Tests.eq(Calc.lastPassed(0, MILESTONES), null);
+});
+
+/* ---- Objectif d'achat ---- */
+Tests.add('objectif : progression, plafond à 100 %, rien sans nom ni prix', () => {
+  const st = Store.defaults().settings;
+  Tests.eq(Calc.goal(st, 100), null);
+  st.goalName = 'Vélo'; st.goalPrice = 450;
+  Tests.eq(Calc.goal(st, 171).pct, 38);
+  Tests.eq(Calc.goal(st, null).saved, 0);
+  Tests.eq(Calc.goal(st, 900).done, true);
+  Tests.eq(Calc.goal(st, 900).ratio, 1);
+  Tests.eq(Calc.goal(st, 900).left, 0);
+  st.goalPrice = 0;
+  Tests.eq(Calc.goal(st, 100), null);
+  const n = Store.normalize({ settings: { goalName: '  ' + 'x'.repeat(80), goalPrice: -3 } }).settings;
+  Tests.eq([n.goalName.length, n.goalPrice], [40, 0]);
+  Tests.eq(Store.normalize({ settings: { goalName: { a: 1 } } }).settings.goalName, '');
+  const d = Demo.generateQuit(Date.now(), 6);
+  d.settings.goalName = 'Vélo'; d.settings.goalPrice = 100000;
+  Tests.eq(/objectif : Vélo/.test(Calc.reasons(d).find((r) => r.title === 'Ton argent').text), true);
 });
 
 /* ---- Raisons, constats, calendrier ---- */
