@@ -62,9 +62,11 @@
   --r-md: 18px;
   --r-lg: 24px;
   --gutter: 24px;
-  --tabbar-h: 62px;
+  --tabbar-h: 56px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Sous la barre d'onglets : la barre d'accueil d'iOS n'a pas besoin de toute la marge de sécurité. */
+  --bar-pad: max(calc(var(--safe-bottom) - 16px), 6px);
 }
 :root[data-theme="light"] {
   --bg: #F3F5F9;
@@ -128,7 +130,7 @@ h1, h2, h3, p { margin: 0; }
   overscroll-behavior: contain;
   touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
-  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + var(--safe-bottom) + 96px);
+  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + 2px + var(--bar-pad) + 96px);
 }
 .tabbar, .fab, .scrim { touch-action: none; }
 .sheet { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
@@ -138,7 +140,7 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 4px 4px var(--safe-bottom);
+  padding: 2px 4px var(--bar-pad);
   background: var(--bar);
   border-top: 1px solid var(--line);
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
@@ -151,12 +153,12 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .tab svg { width: 24px; height: 24px; }
 .tab[aria-current="page"] { color: var(--mint); }
 body.no-chrome .tabbar, body.no-chrome .fab, body.no-fab .fab { display: none; }
-body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 28px); }
-body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px); }
+body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 28px); }
+body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 16px); }
 
 .fab {
   position: fixed; left: 50%; z-index: 21;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 18px);
+  bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 18px);
   transform: translateX(-50%);
   height: 52px; padding: 0 22px; border-radius: 26px;
   display: flex; align-items: center; gap: 10px; white-space: nowrap;
@@ -348,8 +350,25 @@ details.benefit[open] .benefit__more { display: none; }
 .tl__tag--me { color: var(--mint) !important; }
 
 /* Corps : anneau, étape du moment, systèmes, effets */
-.hero { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; }
-.hero__ring { position: relative; width: 112px; height: 112px; }
+.corps { gap: 28px; }
+.sec-title { font-family: var(--font-num); font-size: 20px; font-weight: 600; line-height: 1.2; color: var(--text); }
+.sec-sub { font-size: 14px; color: var(--text-3); }
+.body-text { font-size: 15px; line-height: 1.55; color: var(--text-2); }
+.now__stage { font-family: var(--font-num); font-size: 22px; font-weight: 600; color: var(--mint); line-height: 1.2; }
+.now__group { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.now__head { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.bf-list { padding: 4px 20px; gap: 0; }
+.bf { border-top: 1px solid var(--line); }
+.bf:first-child { border-top: 0; }
+.bf summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 20px; column-gap: 12px; row-gap: 4px; padding: 16px 0; }
+.bf summary::-webkit-details-marker { display: none; }
+.bf__title { font-size: 16px; font-weight: 700; color: var(--text); }
+.bf__lead { grid-column: 1; font-size: 15px; line-height: 1.5; color: var(--text-2); }
+.bf__chev { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 8px; height: 8px; border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3); transform: rotate(45deg); transition: transform .2s; justify-self: center; }
+.bf[open] .bf__chev { transform: rotate(-135deg); }
+.bf__more { display: flex; flex-direction: column; gap: 8px; padding: 0 32px 16px 0; font-size: 15px; line-height: 1.55; color: var(--text-2); }
+.hero { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 18px; align-items: center; }
+.hero__ring { position: relative; width: 104px; height: 104px; }
 .hero__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .hero__track { fill: none; stroke: var(--surface-2); stroke-width: 8; }
 .hero__arc { fill: none; stroke: var(--mint); stroke-width: 8; stroke-linecap: round; }
@@ -359,19 +378,21 @@ details.benefit[open] .benefit__more { display: none; }
 .hero__center b { font-family: var(--font-num); font-size: 30px; line-height: 1; }
 .hero__center span { font-size: 12px; color: var(--text-3); }
 .stage { gap: 16px; align-items: start; }
-.stage__item { font-size: 14px; line-height: 1.4; color: var(--text-2); padding-left: 14px; position: relative; }
+.stage__item { font-size: 15px; line-height: 1.5; color: var(--text-2); padding-left: 14px; position: relative; }
 .stage__item::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 3px; background: var(--line-2); }
 .stage__item--help::before { background: var(--mint); }
 @media (max-width: 360px) { .stage { grid-template-columns: minmax(0, 1fr); } .hero { grid-template-columns: 92px minmax(0, 1fr); } .hero__ring { width: 92px; height: 92px; } }
 .sys { display: flex; flex-direction: column; gap: 6px; }
-.sys__title { font-size: 15px; font-weight: 600; }
+.sys__title { font-size: 16px; font-weight: 700; }
+.sys__text { font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.sys + .sys { padding-top: 14px; border-top: 1px solid var(--line); }
 .sys__done { color: var(--mint); font-weight: 600; }
-.effects { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--text-2); }
-.tl__more summary { list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--mint); min-height: 32px; display: inline-flex; align-items: center; }
+.effects { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5; color: var(--text-2); }
+.tl__more summary { list-style: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--mint); min-height: 32px; display: inline-flex; align-items: center; }
 .tl__more summary::-webkit-details-marker { display: none; }
 .tl__more summary::after { content: ' ›'; }
 .tl__more[open] summary::after { content: ' ‹'; }
-.tl__more p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.tl__more p { margin: 2px 0 0; font-size: 15px; line-height: 1.5; color: var(--text-2); }
 
 /* Frise Corps */
 .timeline { list-style: none; margin: 0; padding: 0; }
@@ -391,7 +412,7 @@ details.benefit[open] .benefit__more { display: none; }
 .tl__title { font-family: var(--font-num); font-size: 17px; font-weight: 600; }
 .tl__tag { font-family: var(--font-text); font-size: 12px; font-weight: 600; color: var(--text-3); margin-left: 4px; }
 .tl--next .tl__tag { color: var(--mint); }
-.tl__text { font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.tl__text { font-size: 15px; line-height: 1.5; color: var(--text-2); }
 .tl--future .tl__title, .tl--future .tl__text { color: var(--text-3); }
 
 /* J'ai une envie : boutons toujours atteignables, même sur petit écran */
@@ -439,8 +460,10 @@ details.benefit[open] .benefit__more { display: none; }
 .faq[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
 .faq__body { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.55; color: var(--text-2); }
 .faq__body strong { color: var(--text); }
-.fold__body { gap: 14px; }
-.fold summary { min-height: 52px; }
+.fold__body { gap: 14px; padding-top: 4px; }
+.fold summary { min-height: 64px; padding: 16px 48px 16px 20px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; }
+.fold { border-radius: var(--r-lg); }
+.fold .faq__body { padding: 0 20px 20px; }
 
 /* Stepper ml */
 .stepper { display: flex; align-items: center; gap: 2px; flex: none; }
@@ -497,7 +520,7 @@ details.benefit[open] .benefit__more { display: none; }
 
 .toast {
   position: fixed; left: 50%; z-index: 50;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 84px);
+  bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 84px);
   transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
   width: min(calc(100% - 32px), 440px); min-height: 52px; padding: 4px 8px 4px 18px; border-radius: 16px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -616,7 +639,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.4.1';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -3089,20 +3112,17 @@ const Screens = {
 
   benefitCard(title, text, extra = '', note = '') {
     if (Screens.compactCards) {
+      // Corps : une ligne par bénéfice (titre + première phrase), la suite au toucher
       const parts = text.split(/(?<=\.)\s/);
       const lead = parts.shift();
       const rest = parts.join(' ');
       if (!rest && !note) {
-        return `<article class="card benefit"><span class="label" style="color:var(--mint)">${Util.esc(title)}</span>
-          <p style="font-size:15px;line-height:1.55">${Util.esc(lead)}</p>${extra}</article>`;
+        return `<div class="bf"><div class="bf__static" style="display:flex;flex-direction:column;gap:4px;padding:16px 0"><span class="bf__title">${Util.esc(title)}</span><span class="bf__lead">${Util.esc(lead)}</span>${extra}</div></div>`;
       }
-      return `<details class="card benefit">
-        <summary><span class="label" style="color:var(--mint)">${Util.esc(title)}</span>
-          <span style="font-size:15px;line-height:1.55">${Util.esc(lead)}</span>
-          <span class="benefit__more small">Lire la suite</span>
-          ${extra}</summary>
-        ${rest ? `<p style="font-size:15px;line-height:1.55">${Util.esc(rest)}</p>` : ''}
-        ${note ? `<p class="tiny faint">${Util.esc(note)}</p>` : ''}
+      return `<details class="bf">
+        <summary><span class="bf__title">${Util.esc(title)}</span><span class="bf__chev" aria-hidden="true"></span>
+          <span class="bf__lead">${Util.esc(lead)}</span>${extra}</summary>
+        <div class="bf__more">${rest ? `<p>${Util.esc(rest)}</p>` : ''}${note ? `<p class="small faint">${Util.esc(note)}</p>` : ''}</div>
       </details>`;
     }
     return `<article class="card benefit">
@@ -3139,7 +3159,8 @@ const Screens = {
   forYou(title) {
     const pr = Store.data.settings.profile;
     const cards = pr.done ? Screens.benefitCards(pr, true) : '';
-    if (cards) return `<section class="stack" style="gap:12px"><h2 class="label">${title}</h2>${cards}
+    if (cards) return `<section class="stack" style="gap:12px"><div class="stack" style="gap:2px"><h2 class="sec-title">${title}</h2><span class="sec-sub">Selon tes réponses au questionnaire</span></div>
+      <div class="card bf-list">${cards}</div>
       <a class="link" href="#/bienvenue" data-action="quiz-start" style="align-self:center">Modifier mes réponses</a></section>`;
     return `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
       <strong>Personnalise tes bénéfices</strong>
@@ -3156,20 +3177,19 @@ const Screens = {
     const next = Calc.nextMilestone(streak.current, list);
     const hadIntake = streak.lastTs > st.quitStart;
     const stage = Calc.stageInfo(streak.current);
-    return `<div class="screen">
+    const done = states.filter((m) => m.state === 'done').length;
+    return `<div class="screen corps">
       <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="small muted">Ce qui change depuis ta dernière prise, il y a ${Screens.durationShort(streak.current)}.</span></header>
+        <span class="body-text">Ce qui change depuis ta dernière prise, il y a <span style="white-space:nowrap">${Screens.durationShort(streak.current)}</span>.</span></header>
       ${Screens.corpsHero(next, streak.current)}
-      <section class="card" style="gap:12px">
-        <span class="label" style="color:var(--mint)">En ce moment · ${Util.esc(stage.title)}</span>
-        <div class="grid-2 stage">
-          <div class="stack" style="gap:6px"><span class="small" style="font-weight:700">C’est normal</span>${stage.normal.map((t) => `<span class="stage__item">${Util.esc(t)}</span>`).join('')}</div>
-          <div class="stack" style="gap:6px"><span class="small" style="font-weight:700">Ce qui aide</span>${stage.helps.map((t) => `<span class="stage__item stage__item--help">${Util.esc(t)}</span>`).join('')}</div>
-        </div>
+      <section class="card" style="gap:14px">
+        <div class="stack" style="gap:2px"><h2 class="sec-sub">En ce moment</h2><span class="now__stage">${Util.esc(stage.title)}</span></div>
+        <div class="now__group"><span class="now__head">C’est normal</span>${stage.normal.map((t) => `<span class="stage__item">${Util.esc(t)}</span>`).join('')}</div>
+        <div class="now__group"><span class="now__head">Ce qui aide</span>${stage.helps.map((t) => `<span class="stage__item stage__item--help">${Util.esc(t)}</span>`).join('')}</div>
       </section>
       ${Screens.systemsCard(streak.current, true)}
+      ${Screens.fold('Repères', Screens.timeline(states), `${done} sur ${states.length} atteint${done > 1 ? 's' : ''}`)}
       ${Screens.forYou('Pour toi')}
-      ${Screens.fold(`Repères · ${states.filter((m) => m.state === 'done').length} sur ${states.length}`, Screens.timeline(states))}
       ${hadIntake ? '<p class="small muted">Les repères repartent de ta dernière prise, mais ton total de jours sans nicotine reste dans Stats.</p>' : ''}
       ${Screens.corpsNote()}
     </div>`;
@@ -3191,21 +3211,24 @@ const Screens = {
         ${next ? `<span class="label" style="color:var(--mint)">Prochain repère</span>
           <span class="value" style="font-size:24px">${Util.esc(next.title)}</span>
           <span class="small muted">dans ${Screens.durationShort(next.remainingMs)}</span>
-          <p class="small" style="line-height:1.5">${Util.esc(next.text)}</p>`
+          <p class="body-text" style="color:var(--text)">${Util.esc(next.text)}</p>`
         : `<span class="label" style="color:var(--mint)">Tous les repères sont passés</span>
-          <p class="small" style="line-height:1.5">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>`}
+          <p class="body-text" style="color:var(--text)">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>`}
       </div>
     </section>`;
   },
 
   /** « Ton corps récupère » : un système par ligne, avec sa progression (ou ce qui t'attend). */
   systemsCard(currentMs, started) {
-    return Screens.fold(started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt', Screens.systemsBody(currentMs, started));
+    const list = Calc.forUsage(SYSTEMS, Calc.usage(Store.data.settings, Store.data.intakes));
+    const done = started ? list.filter((sys) => Calc.systemProgress(currentMs, sys) >= 1).length : 0;
+    const sub = started ? `${list.length} systèmes · ${done} presque rétabli${done > 1 ? 's' : ''}` : `${list.length} systèmes, du cœur au sommeil`;
+    return Screens.fold(started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt', Screens.systemsBody(currentMs, started), sub);
   },
 
   /** Bloc repliable de Corps (fermé par défaut : la page reste courte). */
-  fold(title, body) {
-    return `<details class="faq fold"><summary><span class="label" style="color:var(--mint)">${title}</span></summary><div class="faq__body fold__body">${body}</div></details>`;
+  fold(title, body, sub = '') {
+    return `<details class="faq fold"><summary><span class="sec-title">${title}</span>${sub ? `<span class="sec-sub">${sub}</span>` : ''}</summary><div class="faq__body fold__body">${body}</div></details>`;
   },
 
   systemsBody(currentMs, started) {
@@ -3215,12 +3238,12 @@ const Screens = {
       const when = sys.h < 48 ? `${sys.h} h` : sys.h < 24 * 60 ? `${Math.round(sys.h / 24)} jours` : `${Math.round(sys.h / 24 / 30)} mois`;
       const status = !started ? `en général sous ${when}` : p >= 1 ? 'l’essentiel est fait' : `${Math.floor(p * 100)} %`;
       return `<div class="sys">
-        <div class="row" style="align-items:baseline"><span class="sys__title">${Util.esc(sys.title)}</span><span class="tiny ${p >= 1 ? 'sys__done' : 'faint'}">${status}</span></div>
+        <div class="row" style="align-items:baseline"><span class="sys__title">${Util.esc(sys.title)}</span><span class="small ${p >= 1 ? 'sys__done' : 'faint'}">${status}</span></div>
         <div class="progress"><span style="width:${(p * 100).toFixed(1)}%"></span></div>
-        <span class="tiny faint">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
+        <span class="sys__text">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
       </div>`;
     }).join('');
-    return `${rows}<p class="tiny faint">Durées indicatives : chacun récupère à son rythme.</p>`;
+    return `${rows}<p class="sec-sub" style="font-size:13px">Durées indicatives : chacun récupère à son rythme.</p>`;
   },
 
   corpsNote() {
@@ -3256,18 +3279,18 @@ const Screens = {
     const intro = rate
       ? `Avec environ ${Util.formatNum(rate, 0)} prises par jour${mg ? ` (≈ ${Util.formatNum(mg, 0)} mg de nicotine)` : ''}, ton corps reçoit un stimulant plusieurs fois par jour :`
       : 'À chaque prise, ton corps reçoit un stimulant :';
-    return `<div class="screen">
+    return `<div class="screen corps">
       <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="small muted">Ce que fait la nicotine aujourd'hui, et ce qui change quand on arrête.</span></header>
-      <section class="card" style="gap:10px">
-        <span class="label">La nicotine dans ton corps</span>
-        <p class="small" style="line-height:1.5">${Util.esc(intro)}</p>
+        <span class="body-text">Ce que fait la nicotine aujourd'hui, et ce qui change quand on arrête.</span></header>
+      <section class="card" style="gap:12px">
+        <h2 class="sec-title">La nicotine dans ton corps</h2>
+        <p class="body-text" style="color:var(--text)">${Util.esc(intro)}</p>
         <ul class="effects">${Calc.forUsage(NICOTINE_EFFECTS, usage).map((e) => `<li>${Util.esc(e.text)}</li>`).join('')}</ul>
-        <p class="small" style="line-height:1.5;color:var(--mint)">La bonne nouvelle : la plupart de ces effets s’inversent après l’arrêt, souvent plus vite qu’on ne le pense.</p>
+        <p class="body-text" style="color:var(--mint)">La bonne nouvelle : la plupart de ces effets s’inversent après l’arrêt, souvent plus vite qu’on ne le pense.</p>
       </section>
       ${Screens.systemsCard(0, false)}
+      ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))), `${list.length} étapes, de la 1re heure à 1 an`)}
       ${Screens.forYou('Ce que l’arrêt peut t’apporter')}
-      ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))))}
       <section class="card card--empty" style="gap:10px">
         <strong>Rien ne presse.</strong>
         <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu le sens, passe en mode arrêt : cette page suivra ta récupération, heure après heure.</span>
