@@ -294,6 +294,7 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
   transition: transform .08s, background .15s;
 }
 .log-btn:active { transform: scale(0.97); background: var(--surface-2); }
+.log-btn--solo { width: 100%; height: 104px; font-size: 26px; }
 .entry {
   width: 100%; min-height: 60px; padding: 0 2px; display: flex; align-items: center; gap: 14px;
   background: transparent; border: 0; border-bottom: 1px solid var(--line); text-align: left;
@@ -680,7 +681,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -1675,7 +1676,7 @@ Object.assign(Calc, {
    * Un prix non renseigné donne money:null pour ce type.
    */
   avoided(intakes, settings, now, vapeMl = []) {
-    const base = settings.baseline, start = settings.quitStart;
+    const base = Calc.trackedBaseline(settings), start = settings.quitStart;
     const cost = Calc.unitCosts(settings);
     const days = Math.max(0, now - start) / DAY_MS;
     const taken = Calc.countByType(Calc.quitIntakes(intakes, start).filter((x) => x.ts <= now));
@@ -2007,13 +2008,37 @@ Calc.lastPassed = function (currentMs, list) {
 
 /** Ce que la personne prend : 'snus', 'vape' ou 'both' (référence, historique, puis questionnaire). */
 Calc.usage = function (settings, intakes) {
+  // Le choix fait dans Réglages (ou au questionnaire) l'emporte ; sinon, on le déduit.
+  const chosen = settings.profile && settings.profile.uses;
+  if (chosen === 'snus' || chosen === 'vape' || chosen === 'both') return chosen;
   const b = settings.baseline;
   if (b) return b.snusPerDay > 0 && b.vapePerDay > 0 ? 'both' : b.snusPerDay > 0 ? 'snus' : b.vapePerDay > 0 ? 'vape' : 'both';
   if (intakes.length) {
     const snus = intakes.some((x) => x.type === 'snus'), vape = intakes.some((x) => x.type === 'vape');
     return snus && vape ? 'both' : snus ? 'snus' : 'vape';
   }
-  return (settings.profile && settings.profile.uses) || 'both';
+  return 'both';
+};
+
+/**
+ * Référence limitée aux produits choisis dans Réglages : si l'on ne suit que le snus,
+ * l'ancienne référence vape ne compte plus dans les économies (et inversement).
+ */
+Calc.trackedBaseline = function (settings) {
+  const b = settings.baseline;
+  const uses = settings.profile && settings.profile.uses;
+  if (!b || (uses !== 'snus' && uses !== 'vape')) return b || null;
+  return uses === 'snus' ? { ...b, vapePerDay: 0, vapeMlPerDay: null } : { ...b, snusPerDay: 0 };
+};
+
+/** Ce produit fait-il partie de la consommation suivie ? */
+Calc.tracks = function (type, settings = Store.data.settings, intakes = Store.data.intakes) {
+  const u = Calc.usage(settings, intakes);
+  return u === 'both' || u === type;
+};
+/** Type proposé par défaut pour une nouvelle prise. */
+Calc.defaultType = function (settings = Store.data.settings, intakes = Store.data.intakes) {
+  return Calc.usage(settings, intakes) === 'vape' ? 'vape' : 'snus';
 };
 
 /** Éléments propres au snus ou à la vape, filtrés selon l'usage. */
@@ -2108,7 +2133,7 @@ Object.assign(Calc, {
    */
   yearlyCost(settings, intakes, vapeMl = [], todayKey = Dates.todayKey()) {
     const cost = Calc.unitCosts(settings);
-    let rate = settings.baseline;
+    let rate = Calc.trackedBaseline(settings);
     if (!rate) {
       const a = Calc.avgPerDay(intakes, todayKey, 30);
       const m = Calc.mlAverage(vapeMl, Dates.addDays(todayKey, -30), Dates.addDays(todayKey, -1));
@@ -2125,7 +2150,8 @@ Object.assign(Calc, {
 
   /** Prises par jour de référence (ou moyenne récente), pour « Ne plus dépendre ». */
   dailyRate(settings, intakes) {
-    if (settings.baseline) return settings.baseline.snusPerDay + settings.baseline.vapePerDay;
+    const b = Calc.trackedBaseline(settings);
+    if (b) return b.snusPerDay + b.vapePerDay;
     const a = Calc.avgPerDay(intakes, Dates.todayKey(), 30);
     return a ? a.total : null;
   }
@@ -2401,15 +2427,17 @@ const Screens = {
           <span class="big-number">${c.total}</span>
           <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ${isToday ? 'aujourd’hui' : 'ce jour-là'}</span>
         </div>
-        <p class="small muted">${c.snus} snus <span class="faint">·</span> ${c.vape} vape${avg ? ` <span class="faint">·</span> moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}` : ''}</p>
+        ${(() => {
+          const both = Calc.usage(Store.data.settings, Store.data.intakes) === 'both' || (c.snus && c.vape);
+          const parts = (both ? [`${c.snus} snus`, `${c.vape} vape`] : [])
+            .concat(avg ? [`moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}`] : []);
+          return parts.length ? `<p class="small muted">${parts.join(' <span class="faint">·</span> ')}</p>` : '';
+        })()}
         ${Screens.targetLine(key, c.total, isToday)}
         ${Screens.weekStrip(key, false)}
       </section>
 
-      ${isToday ? `<div class="grid-2">
-        <button type="button" class="log-btn" data-action="add-intake" data-type="snus">${Icon.plus}Snus</button>
-        <button type="button" class="log-btn" data-action="add-intake" data-type="vape">${Icon.plus}Vape</button>
-      </div>` : ''}
+      ${isToday ? Screens.logButtons() : ''}
       ${Screens.mlRow(key, isToday)}
 
       <section class="stack" style="gap:0">
@@ -2423,6 +2451,13 @@ const Screens = {
       ${isToday ? Screens.whyCard() : ''}
       ${isToday ? Screens.backupCard() : ''}
     </div>`;
+  },
+
+  /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
+  logButtons() {
+    const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
+    const btn = (t) => `<button type="button" class="log-btn${types.length === 1 ? ' log-btn--solo' : ''}" data-action="add-intake" data-type="${t}">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</button>`;
+    return types.length === 1 ? btn(types[0]) : `<div class="grid-2">${types.map(btn).join('')}</div>`;
   },
 
   /** Aujourd'hui (observation) : un bénéfice du profil, différent chaque jour. */
@@ -2494,6 +2529,8 @@ const Screens = {
       ${q('Noter une prise', `
         <p>« + Snus » ou « + Vape » : l'heure est notée toute seule. Le déclencheur et l'intensité de l'envie sont facultatifs (désactivable dans Réglages → Préférences).</p>
         <p>Une prise oubliée ? « Ajouter une prise oubliée », avec sa date et son heure. Pour corriger ou supprimer une prise, touche sa ligne, ou passe par Réglages → Historique.</p>`)}
+      ${q('Snus, vape ou les deux', `
+        <p>Dans Réglages → Je consomme, choisis ce que tu suis. L'écran Aujourd'hui, les stats, les prix et la page Corps s'adaptent : un seul bouton de relevé si tu ne suis qu'un produit. Tes données ne sont jamais effacées en changeant ce choix.</p>`)}
       ${q('Vape : sessions ou millilitres', `
         <p>Une <strong>session</strong> = un « + Vape ». Si tu le souhaites, note aussi les <strong>ml</strong> vapotés dans la journée (ligne « Vape du jour ») : c'est plus précis pour les dépenses et la nicotine.</p>
         <p>Dans Réglages → Prix et dosage, indique le prix, la contenance (ml) et le taux de nicotine (mg/ml) de ta capsule ou de ton flacon.</p>`)}
@@ -2599,11 +2636,11 @@ const Screens = {
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Économisé</span><span class="value value--mint value--money" ${av.money !== null ? `data-countup="${av.money}"` : ''}>${money}</span>
           ${av.missing.length ? '<a class="tiny faint" href="#/reglages">prix à renseigner</a>' : ''}</div>
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Meilleur enchaînement</span><span class="value">${Screens.durationShort(streak.best)}</span></div>
-        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Snus évités</span><span class="value">${av.snus.avoided}</span><span class="tiny faint">portion${av.snus.avoided > 1 ? 's' : ''}</span></div>
-        <div class="card" style="padding:18px;gap:6px"><span class="small muted">Vape évitée</span>
+        ${Calc.tracks('snus') ? `<div class="card" style="padding:18px;gap:6px${Calc.tracks('vape') ? '' : ';grid-column:span 2'}"><span class="small muted">Snus évités</span><span class="value">${av.snus.avoided}</span><span class="tiny faint">portion${av.snus.avoided > 1 ? 's' : ''}</span></div>` : ''}
+        ${Calc.tracks('vape') ? `<div class="card" style="padding:18px;gap:6px${Calc.tracks('snus') ? '' : ';grid-column:span 2'}"><span class="small muted">Vape évitée</span>
           ${av.vape.ml !== null
             ? `<span class="value">${Util.formatNum(av.vape.ml, 1)} <span style="font-size:18px">ml</span></span><span class="tiny faint">${av.vape.avoided} session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`
-            : `<span class="value">${av.vape.avoided}</span><span class="tiny faint">session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`}</div>
+            : `<span class="value">${av.vape.avoided}</span><span class="tiny faint">session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`}</div>` : ''}
       </div>
       ${Screens.goalProgress(st, av.money)}
       ${av.nicotineMg ? `<p class="small muted" style="margin-top:-8px">≈ <span class="num" style="color:var(--text)">${Util.formatNum(av.nicotineMg, 0)} mg</span> de nicotine évités.</p>` : ''}
@@ -2653,7 +2690,7 @@ const Screens = {
     const now = Date.now();
     const clean = Calc.cleanDays(Store.data.intakes, st.quitStart, now);
     const best = Calc.streaks(Store.data.intakes, st.quitStart, now).best;
-    const d = App.relapseDraft || (App.relapseDraft = { type: 'snus', trigger: null });
+    const d = App.relapseDraft || (App.relapseDraft = { type: Calc.defaultType(), trigger: null });
     return `<div class="screen">
       <header class="header"><span class="wordmark">STASE</span>
         <a class="icon-btn" href="#/aujourdhui" aria-label="Fermer sans rien noter">${Icon.close}</a></header>
@@ -2666,8 +2703,8 @@ const Screens = {
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Meilleur enchaînement</span><span class="value" style="font-size:40px">${Screens.durationShort(best)}</span></div>
       </div>
       <section class="stack">
-        <span class="label">Ce que tu as pris</span>
-        ${Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], d.type, 'Type', 'relapse-type')}
+        ${Calc.usage(Store.data.settings, Store.data.intakes) === 'both' ? `<span class="label">Ce que tu as pris</span>
+        ${Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], d.type, 'Type', 'relapse-type')}` : ''}
       </section>
       <section class="stack">
         <span class="label">Le contexte, si tu veux</span>
@@ -2755,9 +2792,7 @@ const Screens = {
   /** Vape : millilitres de liquide du jour, avec la nicotine correspondante. */
   mlRow(key, isToday) {
     const st = Store.data.settings;
-    const uses = st.profile.uses;
-    const vapes = uses ? uses !== 'snus' : true;
-    if (!vapes && !Store.data.vapeMl.length) return '';
+    if (!Calc.tracks('vape')) return '';
     const entry = Store.data.vapeMl.find((x) => x.date === key);
     const ml = entry ? entry.ml : null;
     const mg = ml !== null && st.vapeMgPerMl > 0 ? ml * st.vapeMgPerMl : null;
@@ -2999,7 +3034,7 @@ const Screens = {
         ${delta !== null ? `<span class="small muted">${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Util.formatNum(Math.abs(delta), 1)} vs ${n} j précédents</span>` : ''}
       </div>
       ${Charts.bars(items, { avg: avg ? avg.total : null, aria: `Prises par jour sur ${n} jours` })}
-      ${avg ? `<p class="tiny faint">${Util.formatNum(avg.snus, 1)} snus et ${Util.formatNum(avg.vape, 1)} vape par jour en moyenne. La ligne pointillée montre la moyenne ; aujourd'hui (en clair) n'est pas fini.</p>` : ''}
+      ${avg ? `<p class="tiny faint">${Calc.usage(Store.data.settings, intakes) === 'both' ? `${Util.formatNum(avg.snus, 1)} snus et ${Util.formatNum(avg.vape, 1)} vape par jour en moyenne. ` : ''}La ligne pointillée montre la moyenne ; aujourd'hui (en clair) n'est pas fini.</p>` : ''}
     </section>`;
   },
 
@@ -3027,14 +3062,14 @@ const Screens = {
     const week = Calc.spendRange(intakes, Store.data.vapeMl, s, Calc.weekStart(today), today);
     const month = Calc.spendRange(intakes, Store.data.vapeMl, s, Calc.monthStart(today), today);
     const yearly = Calc.yearlyCost(s, intakes, Store.data.vapeMl, today);
-    const missing = [...new Set([...week.missing, ...month.missing])];
+    const missing = [...new Set([...week.missing, ...month.missing])].filter((t) => Calc.tracks(t, s, intakes));
     const tile = (title, sp, sub) => `<div class="card" style="padding:18px;gap:6px">
         <span class="small muted">${title}</span>
         <span class="value value--money">${sp.total > 0 || !sp.missing.length ? Util.formatMoney(sp.total) : '—'}</span>
         <span class="tiny faint">${sub}</span></div>`;
     return `<section class="stack" style="gap:12px">
       <div class="grid-2">
-        ${tile('Cette semaine', week, `snus ${Util.formatMoney(week.snus)} · vape ${Util.formatMoney(week.vape)}`)}
+        ${tile('Cette semaine', week, Calc.usage(s, intakes) === 'both' ? `snus ${Util.formatMoney(week.snus)} · vape ${Util.formatMoney(week.vape)}` : 'depuis lundi')}
         ${tile('Ce mois', month, yearly !== null ? `≈ ${Util.formatMoney(yearly, 0)} sur un an` : 'depuis le 1er')}
       </div>
       ${missing.length ? `<p class="small muted">Prix ${missing.map((t) => (t === 'snus' ? 'du snus' : 'de la vape')).join(' et ')} non renseigné : ces prises ne sont pas comptées.
@@ -3047,16 +3082,17 @@ const Screens = {
     const s = Store.data.settings;
     const today = Dates.todayKey();
     const mlAvg = Calc.mlAverage(Store.data.vapeMl, Dates.addDays(today, -App.statsRange), Dates.addDays(today, -1));
-    const snusMg = s.snusMg > 0 && avg && avg.snus > 0 ? Calc.snusMg(avg.snus, s) : null;
-    const vapeMg = mlAvg && s.vapeMgPerMl > 0 ? mlAvg.ml * s.vapeMgPerMl : null;
-    if (snusMg === null && !mlAvg) return '';
+    const snusMg = Calc.tracks('snus') && s.snusMg > 0 && avg && avg.snus > 0 ? Calc.snusMg(avg.snus, s) : null;
+    const mlOk = Calc.tracks('vape') ? mlAvg : null;
+    const vapeMg = mlOk && s.vapeMgPerMl > 0 ? mlOk.ml * s.vapeMgPerMl : null;
+    if (snusMg === null && !mlOk) return '';
     const total = (snusMg || 0) + (vapeMg || 0);
     const row = (label, value, sub) => `<div class="row"><span>${label}<br><span class="tiny faint">${sub}</span></span><span class="num" style="font-size:18px;font-weight:600">${value}</span></div>`;
     return `<section class="card" style="gap:12px">
       <span class="small muted">Nicotine par jour (estimation)</span>
       <span class="value">${total > 0 ? `≈ ${Util.formatNum(total, 0)} mg` : '—'}</span>
       ${snusMg !== null ? row('Snus', `${Util.formatNum(snusMg, 0)} mg`, `${Util.formatNum(avg.snus, 1)} portions × ${Util.formatNum(s.snusMg)} mg`) : ''}
-      ${mlAvg ? row('Vape', vapeMg !== null ? `${Util.formatNum(vapeMg, 0)} mg` : '—', `${Util.formatNum(mlAvg.ml, 1)} ml/jour${vapeMg !== null ? ` × ${Util.formatNum(s.vapeMgPerMl)} mg/ml` : ' · taux à renseigner'} · ${mlAvg.days} j notés`) : ''}
+      ${mlOk ? row('Vape', vapeMg !== null ? `${Util.formatNum(vapeMg, 0)} mg` : '—', `${Util.formatNum(mlOk.ml, 1)} ml/jour${vapeMg !== null ? ` × ${Util.formatNum(s.vapeMgPerMl)} mg/ml` : ' · taux à renseigner'} · ${mlOk.days} j notés`) : ''}
       <p class="tiny faint">C'est la teneur des portions et du liquide : le corps n'en absorbe qu'une partie, variable selon les personnes.</p>
     </section>`;
   },
@@ -3365,12 +3401,19 @@ const Screens = {
     const s = Store.data.settings;
     const n = Store.data.intakes.length;
     const unit = s.vapeFormat === 'flacon' ? 'flacon' : 'capsule';
-    const missing = !(s.snusBoxPrice > 0) && !(s.vapeUnitPrice > 0);
-    const prices = [s.snusBoxPrice > 0 ? `snus ${Util.formatMoney(s.snusBoxPrice)}` : '', s.vapeUnitPrice > 0 ? `vape ${Util.formatMoney(s.vapeUnitPrice)}` : ''].filter(Boolean).join(' · ');
+    const snusOn = Calc.tracks('snus'), vapeOn = Calc.tracks('vape');
+    const missing = (snusOn && !(s.snusBoxPrice > 0)) || (vapeOn && !(s.vapeUnitPrice > 0));
+    const prices = [snusOn ? `snus ${s.snusBoxPrice > 0 ? Util.formatMoney(s.snusBoxPrice) : '—'}` : '', vapeOn ? `vape ${s.vapeUnitPrice > 0 ? Util.formatMoney(s.vapeUnitPrice) : '—'}` : ''].filter(Boolean).join(' · ');
+    const title = snusOn && vapeOn ? 'Snus et vape' : snusOn ? 'Snus' : 'Vape';
     return `<div class="screen">
       <h1 class="title">Réglages</h1>
 
       ${Screens.modeSection(s)}
+
+      <section class="stack">
+        <h2 class="label">Je consomme</h2>
+        ${Screens.segmented('uses', [['snus', 'Snus'], ['vape', 'Vape'], ['both', 'Les deux']], Calc.usage(s, Store.data.intakes), 'Ce que tu consommes', 'set-uses')}
+      </section>
 
       <section class="stack">
         <h2 class="label">Motivation</h2>
@@ -3388,18 +3431,18 @@ const Screens = {
       <section class="stack">
         <h2 class="label">Prix et dosage</h2>
         <details class="faq fold"${missing ? ' open' : ''}>
-          <summary><span style="font-weight:700">Snus et vape</span><span class="sec-sub"${missing ? ' style="color:var(--warm)"' : ''}>${missing ? 'Prix à renseigner' : Util.esc(prices)}</span></summary>
+          <summary><span style="font-weight:700">${title}</span><span class="sec-sub"${missing ? ' style="color:var(--warm)"' : ''}>${missing ? 'Prix à renseigner' : Util.esc(prices)}</span></summary>
           <div class="faq__body fold__body" style="gap:0">
-            <span class="label" style="padding:4px 0 0">Snus</span>
+            ${snusOn ? `${vapeOn ? '<span class="label" style="padding:4px 0 0">Snus</span>' : ''}
             ${Screens.field('snusBoxPrice', 'Prix d’une boîte', s.snusBoxPrice, 'CHF', 'decimal')}
             ${Screens.field('snusPerBox', 'Portions par boîte', s.snusPerBox, '', 'numeric')}
-            ${Screens.field('snusMg', 'Force par portion', s.snusMg, 'mg', 'decimal')}
-            <span class="label" style="padding:16px 0 10px">Vape</span>
+            ${Screens.field('snusMg', 'Force par portion', s.snusMg, 'mg', 'decimal')}` : ''}
+            ${vapeOn ? `${snusOn ? '<span class="label" style="padding:16px 0 10px">Vape</span>' : '<span style="height:6px"></span>'}
             ${Screens.segmented('vapeFormat', [['capsule', 'Capsule'], ['flacon', 'Flacon']], s.vapeFormat, 'Format')}
             ${Screens.field('vapeUnitPrice', `Prix d’${unit === 'flacon' ? 'un flacon' : 'une capsule'}`, s.vapeUnitPrice, 'CHF', 'decimal')}
             ${Screens.field('vapeMlPerUnit', 'Contenance', s.vapeMlPerUnit, 'ml', 'decimal')}
             ${Screens.field('vapeMgPerMl', 'Taux de nicotine', s.vapeMgPerMl, 'mg/ml', 'decimal')}
-            ${Screens.field('vapeSessionsPerUnit', `Sessions par ${unit}`, s.vapeSessionsPerUnit, '', 'numeric')}
+            ${Screens.field('vapeSessionsPerUnit', `Sessions par ${unit}`, s.vapeSessionsPerUnit, '', 'numeric')}` : ''}
           </div>
         </details>
       </section>
@@ -3544,7 +3587,9 @@ const IntakeSheet = {
   },
 
   whenHtml(st) {
-    return `${Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], st.type, 'Type', 'sheet-type')}
+    // Le choix du type n'apparaît que si les deux produits sont suivis (ou pour corriger une prise de l'autre type).
+    const showType = Calc.usage(Store.data.settings, Store.data.intakes) === 'both' || st.type !== Calc.defaultType();
+    return `${showType ? Screens.segmented('', [['snus', 'Snus'], ['vape', 'Vape']], st.type, 'Type', 'sheet-type') : ''}
       <label class="stack">
         <span class="label">Date et heure</span>
         <span class="field__box" style="width:100%"><input type="datetime-local" data-sheet="ts"
@@ -3659,7 +3704,9 @@ const PhaseSheet = {
     const f = (key, label, v) => `<label class="field" style="padding:0"><span class="field__label">${label}</span>
       <span class="field__box"><input type="text" inputmode="decimal" data-sheet="${key}" value="${v === null ? '' : Util.formatNum(v, 1)}" autocomplete="off">
       <span class="field__unit">/ jour</span></span></label>`;
-    return `<div class="group">${f('base-snus', 'Snus', snus)}${f('base-vape', 'Vape (sessions)', vape)}${f('base-ml', 'Vape (ml, facultatif)', ml)}</div>`;
+    // Les champs du produit non suivi restent dans la page (lus à l'enregistrement), mais cachés.
+    const hide = (on, html) => (on ? html : html.replace('<label class="field"', '<label hidden class="field"'));
+    return `<div class="group">${hide(Calc.tracks('snus'), f('base-snus', 'Snus', snus))}${hide(Calc.tracks('vape'), f('base-vape', 'Vape (sessions)', vape))}${hide(Calc.tracks('vape'), f('base-ml', 'Vape (ml, facultatif)', ml))}</div>`;
   },
 
   /** Lit les deux champs de référence ; null si invalide. */
@@ -3749,7 +3796,7 @@ const Actions = {
     if (App.route() !== 'aujourdhui') App.viewDay = null;
     // Pour un jour passé, on propose midi ce jour-là ; sinon maintenant.
     const ts = App.viewDay && App.viewDay !== today ? Dates.keyToStart(App.viewDay) + 12 * 3600000 : Date.now();
-    IntakeSheet.open({ mode: 'new', id: null, type: 'snus', ts, trigger: null, intensity: null, confirmDelete: false });
+    IntakeSheet.open({ mode: 'new', id: null, type: Calc.defaultType(), ts, trigger: null, intensity: null, confirmDelete: false });
   },
   'sheet-type'(el) { UI.sheetState.type = el.dataset.value; IntakeSheet.refresh(); },
   'sheet-trigger'(el) {
@@ -3794,6 +3841,10 @@ const Actions = {
     Store.update((d) => { d.settings[key] = !d.settings[key]; });
   },
 
+  'set-uses'(el) {
+    if (!['snus', 'vape', 'both'].includes(el.dataset.value)) return;
+    Store.update((d) => { d.settings.profile.uses = el.dataset.value; });
+  },
   'set-setting'(el) {
     Store.update((d) => { d.settings[el.dataset.key] = el.dataset.value; });
     if (el.dataset.key === 'theme') UI.applyTheme();
@@ -3979,10 +4030,10 @@ const Actions = {
   'craving-gave-in'() {
     const ctx = Craving.save(false);
     if (Store.data.settings.phase === 'arret') {
-      App.relapseDraft = { type: 'snus', trigger: ctx.trigger, intensity: ctx.intensity };
+      App.relapseDraft = { type: Calc.defaultType(), trigger: ctx.trigger, intensity: ctx.intensity };
       App.go('#/reprendre');
     } else {
-      App.afterRoute = () => IntakeSheet.open({ mode: 'new', id: null, type: 'snus', ts: Date.now(), trigger: ctx.trigger, intensity: ctx.intensity, confirmDelete: false });
+      App.afterRoute = () => IntakeSheet.open({ mode: 'new', id: null, type: Calc.defaultType(), ts: Date.now(), trigger: ctx.trigger, intensity: ctx.intensity, confirmDelete: false });
       App.go('#/aujourdhui');
     }
   },
@@ -5069,6 +5120,15 @@ Tests.add('corps : usage déduit (référence, historique, questionnaire)', () =
   Tests.eq(Calc.usage(s, []), 'both');
   Tests.eq(Calc.usage({ ...s, profile: { ...s.profile, uses: 'vape' } }, []), 'vape');
   Tests.eq(Calc.usage(s, [{ type: 'snus' }]), 'snus');
+  Tests.eq(Calc.usage({ ...s, profile: { ...s.profile, uses: 'vape' } }, [{ type: 'snus' }]), 'vape'); // le choix l'emporte
+  Tests.eq(Calc.tracks('snus', { ...s, profile: { ...s.profile, uses: 'vape' } }, []), false);
+  Tests.eq(Calc.tracks('vape', { ...s, profile: { ...s.profile, uses: 'both' } }, []), true);
+  Tests.eq(Calc.defaultType({ ...s, profile: { ...s.profile, uses: 'vape' } }, []), 'vape');
+  const b = { snusPerDay: 4, vapePerDay: 6, vapeMlPerDay: 1.2, days: 7 };
+  Tests.eq(Calc.trackedBaseline({ ...s, baseline: b, profile: { ...s.profile, uses: 'snus' } }), { ...b, vapePerDay: 0, vapeMlPerDay: null });
+  Tests.eq(Calc.trackedBaseline({ ...s, baseline: b, profile: { ...s.profile, uses: 'both' } }), b);
+  const q = { ...s, baseline: b, quitStart: 1e12, snusBoxPrice: 8, snusPerBox: 20, vapeUnitPrice: 6, vapeMlPerUnit: 2, profile: { ...s.profile, uses: 'snus' } };
+  Tests.near(Calc.avoided([], q, 1e12 + 2 * DAY_MS).money, 8 * 0.4);
   Tests.eq(Calc.usage({ ...s, baseline: { snusPerDay: 0, vapePerDay: 5, days: 7 } }, [{ type: 'snus' }]), 'vape');
   const keys = (u) => Calc.forUsage(SYSTEMS, u).map((x) => x.key);
   Tests.eq(keys('vape').includes('bouche'), false);
