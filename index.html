@@ -136,6 +136,8 @@ h1, h2, h3, p { margin: 0; }
 .sheet { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
 body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .screen { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.screen--today { position: relative; }
+.screen--today > :not(.ambient) { position: relative; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
@@ -461,6 +463,10 @@ details.benefit[open] .benefit__more { display: none; }
 .faq__body { padding: 0 18px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.55; color: var(--text-2); }
 .faq__body strong { color: var(--text); }
 .fold__body { gap: 14px; padding-top: 4px; }
+.field--text { flex-direction: column; align-items: stretch; gap: 0; padding-top: 12px; }
+.field__mini { font-size: 13px; color: var(--text-3); }
+.field--text input { width: 100%; min-height: 40px; border: 0; background: transparent; font-family: var(--font-text); font-size: 16px; text-align: left; padding: 0; outline: none; }
+.field--text input::placeholder { color: var(--text-3); }
 .fold summary { min-height: 64px; padding: 16px 48px 16px 20px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; }
 .fold { border-radius: var(--r-lg); }
 .fold .faq__body { padding: 0 20px 20px; }
@@ -560,6 +566,41 @@ details.benefit[open] .benefit__more { display: none; }
 .fab:active { transform: translateX(-50%) scale(0.96); }
 .tab:active svg { transform: scale(0.9); }
 
+/* Aujourd'hui : halo d'ambiance, semaine, point « en direct » */
+.ambient { position: absolute; left: 0; right: 0; top: -160px; height: 460px; overflow: hidden; pointer-events: none; }
+.ambient::before { content: ''; position: absolute; inset: 0 -15%;
+  background: radial-gradient(closest-side at 35% 50%, var(--glow-a), transparent), radial-gradient(closest-side at 70% 40%, var(--glow-b), transparent);
+  animation: drift 16s ease-in-out infinite alternate; will-change: transform; }
+.ambient--quit { --glow-b: var(--glow-a); }
+:root { --glow-a: rgba(94, 230, 196, 0.10); --glow-b: rgba(242, 179, 107, 0.08); }
+:root[data-theme="light"] { --glow-a: rgba(14, 127, 105, 0.08); --glow-b: rgba(163, 86, 15, 0.06); }
+@keyframes drift { from { transform: translate3d(-5%, 0, 0) scale(1); } to { transform: translate3d(5%, 24px, 0) scale(1.08); } }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; margin-top: 14px; max-width: 320px; }
+.week__col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.week__bar { width: 100%; max-width: 20px; height: calc(4px + var(--h) * 34px); border-radius: 5px; background: var(--surface-2); transform-origin: 50% 100%; }
+.week__bar.has { background: var(--data); }
+.is-today .week__bar.has { background: var(--mint); }
+.is-sel .week__bar.has { background: var(--data-hi); }
+.week__d { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; }
+.is-today .week__d { color: var(--mint); }
+.week__dot { width: 22px; height: 22px; border-radius: 11px; border: 2px solid var(--line-2); display: flex; align-items: center; justify-content: center; color: var(--on-mint); }
+.week__dot svg { width: 12px; height: 12px; stroke-width: 3.2; }
+.week__dot.is-clean { background: var(--mint); border-color: var(--mint); }
+.week__dot.is-now { border-color: var(--mint); border-style: dashed; }
+.week__dot.is-before { border-color: var(--line); border-style: dotted; }
+.week__dot.is-taken { border-color: var(--warm-soft); }
+.is-entering .week__bar { animation: growY 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(0.2s + var(--j) * 55ms); }
+.is-entering .week__dot { animation: pop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) both; animation-delay: calc(0.2s + var(--j) * 60ms); }
+.live-dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 4px; background: var(--mint); margin-right: 8px; vertical-align: 1px; }
+.live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--mint); animation: livePulse 2.4s ease-out infinite; }
+@keyframes livePulse { from { transform: scale(1); opacity: 0.6; } to { transform: scale(2.8); opacity: 0; } }
+.log-btn { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 60%); position: relative; overflow: hidden; }
+.log-btn svg { transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.log-btn:active svg { transform: rotate(90deg) scale(1.1); }
+.goal .progress > span { position: relative; overflow: hidden; }
+.goal .progress > span::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent); transform: translateX(-100%); animation: sheen 2.2s ease-in-out 1.1s 2; }
+@keyframes sheen { to { transform: translateX(100%); } }
+
 /* Animations « sympa » : choix, éclats, +1, onglets, ouverture */
 @keyframes pickPop { 0% { transform: scale(0.92); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .pick-pop { animation: pickPop 0.32s cubic-bezier(0.3, 1.5, 0.5, 1); }
@@ -639,7 +680,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.5.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2350,7 +2391,8 @@ const Screens = {
     const list = Calc.onDay(Store.data.intakes, key);
     const c = Calc.countByType(list);
     const avg = Calc.avgPerDay(Store.data.intakes, today);
-    return `<div class="screen">
+    return `<div class="screen screen--today">
+      <div class="ambient" aria-hidden="true"></div>
       <header class="header"><span class="wordmark">STASE</span><span class="pill">Observation</span></header>
 
       <section class="stack" style="gap:6px">
@@ -2361,6 +2403,7 @@ const Screens = {
         </div>
         <p class="small muted">${c.snus} snus <span class="faint">·</span> ${c.vape} vape${avg ? ` <span class="faint">·</span> moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}` : ''}</p>
         ${Screens.targetLine(key, c.total, isToday)}
+        ${Screens.weekStrip(key, false)}
       </section>
 
       ${isToday ? `<div class="grid-2">
@@ -2372,7 +2415,7 @@ const Screens = {
       <section class="stack" style="gap:0">
         <div class="row" style="padding-bottom:8px">
           <h2 style="font-size:15px">${isToday ? 'Prises du jour' : 'Prises de ce jour'}</h2>
-          ${list.length ? '<span class="small faint">Touche une ligne pour modifier</span>' : ''}
+          ${list.length ? '<span class="small faint">Touche pour modifier</span>' : ''}
         </div>
         ${list.length ? list.slice().reverse().map(Screens.intakeRow).join('') : Screens.todayEmpty(isToday)}
         <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
@@ -2449,14 +2492,14 @@ const Screens = {
         <p><strong>Arrêt.</strong> Quand tu le sens, passe en mode arrêt dans les Réglages. Ta moyenne réelle d'observation devient la référence : c'est elle qui sert à calculer l'argent économisé et les doses évitées.</p>
         <p>Tu peux revenir en observation à tout moment, sans rien perdre.</p>`, true)}
       ${q('Noter une prise', `
-        <p>« + Snus » ou « + Vape » : l'heure est notée toute seule. Le déclencheur et l'intensité de l'envie sont facultatifs (désactivable dans Réglages → Relevé).</p>
+        <p>« + Snus » ou « + Vape » : l'heure est notée toute seule. Le déclencheur et l'intensité de l'envie sont facultatifs (désactivable dans Réglages → Préférences).</p>
         <p>Une prise oubliée ? « Ajouter une prise oubliée », avec sa date et son heure. Pour corriger ou supprimer une prise, touche sa ligne, ou passe par Réglages → Historique.</p>`)}
       ${q('Vape : sessions ou millilitres', `
         <p>Une <strong>session</strong> = un « + Vape ». Si tu le souhaites, note aussi les <strong>ml</strong> vapotés dans la journée (ligne « Vape du jour ») : c'est plus précis pour les dépenses et la nicotine.</p>
-        <p>Dans les Réglages, indique le prix, la contenance (ml) et le taux de nicotine (mg/ml) de ta capsule ou de ton flacon.</p>`)}
+        <p>Dans Réglages → Prix et dosage, indique le prix, la contenance (ml) et le taux de nicotine (mg/ml) de ta capsule ou de ton flacon.</p>`)}
       ${q('J’ai une envie', `
         <p>Le bouton « J’ai une envie », sur l’écran Aujourd’hui, lance un minuteur de dix minutes avec une respiration guidée : quatre secondes pour inspirer, six pour expirer. Une envie monte, culmine et redescend, souvent en quelques minutes.</p>
-        <p>Pendant le minuteur, une carte te rappelle tes raisons : ta phrase à toi (Réglages → Profil), tes progrès et les bénéfices qui te concernent.</p>
+        <p>Pendant le minuteur, une carte te rappelle tes raisons : ta phrase à toi (Réglages → Motivation), tes progrès et les bénéfices qui te concernent.</p>
         <p>À la fin, un mini-relevé (déclencheur, intensité) aide à repérer tes moments. Si tu as fini par prendre, ce n'est pas grave : note-le, et on repart.</p>`)}
       ${q('Après une prise en mode arrêt', `
         <p>Rien n'est remis à zéro. Le compteur repart de ta dernière prise, mais ton total de jours sans nicotine et ton meilleur enchaînement restent. La plupart des gens arrêtent après plusieurs essais.</p>`)}
@@ -2530,7 +2573,8 @@ const Screens = {
     const traversed = Store.data.cravings.filter((c) => c.resolved && c.ts >= st.quitStart).length;
     const money = av.money === null ? '—' : Util.formatMoney(av.money);
     const units = av.vape.units !== null && av.vape.avoided > 0 ? ` · ≈ ${Util.formatNum(av.vape.units, 1)} ${st.vapeFormat === 'flacon' ? 'flacon' : 'capsule'}${av.vape.units >= 2 ? 's' : ''}` : '';
-    return `<div class="screen">
+    return `<div class="screen screen--today">
+      <div class="ambient ambient--quit" aria-hidden="true"></div>
       <header class="header"><span class="wordmark">STASE</span><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
 
       ${fresh ? `<section class="card card--featured milestone-new" style="gap:8px">
@@ -2540,9 +2584,10 @@ const Screens = {
       </section>` : ''}
 
       <section class="stack" style="gap:6px">
-        <span class="label">Sans nicotine depuis</span>
+        <span class="label"><span class="live-dot" aria-hidden="true"></span>Sans nicotine depuis</span>
         <span class="big-number" style="font-size:72px;line-height:1" data-live="since-big">${Screens.sinceBig(streak.current)}</span>
         <span class="num muted" style="font-size:22px" data-live="since-small">${Screens.sinceSmall(streak.current)}</span>
+        ${Screens.weekStrip(Dates.todayKey(), true)}
       </section>
 
       ${next ? `<a class="stack" href="#/corps" style="gap:10px;text-decoration:none;color:inherit">
@@ -2561,7 +2606,7 @@ const Screens = {
             : `<span class="value">${av.vape.avoided}</span><span class="tiny faint">session${av.vape.avoided > 1 ? 's' : ''}${units}</span>`}</div>
       </div>
       ${Screens.goalProgress(st, av.money)}
-      ${av.nicotineMg ? `<p class="small muted" style="margin-top:-8px">≈ <span class="num" style="color:var(--text)">${Util.formatNum(av.nicotineMg, 0)} mg</span> de nicotine évités (teneur des portions et du liquide).</p>` : ''}
+      ${av.nicotineMg ? `<p class="small muted" style="margin-top:-8px">≈ <span class="num" style="color:var(--text)">${Util.formatNum(av.nicotineMg, 0)} mg</span> de nicotine évités.</p>` : ''}
       ${st.baseline ? '' : '<p class="small muted">Pas de référence : indique ta consommation habituelle dans <a class="link--mint" href="#/reglages">Réglages</a> pour calculer économies et doses évitées.</p>'}
 
       <section class="card card--outline" style="gap:8px">
@@ -2717,7 +2762,7 @@ const Screens = {
     const ml = entry ? entry.ml : null;
     const mg = ml !== null && st.vapeMgPerMl > 0 ? ml * st.vapeMgPerMl : null;
     const hint = ml === null
-      ? (isToday ? 'Facultatif : estime ce que tu as vapoté aujourd’hui.' : 'Pas de relevé ce jour-là.')
+      ? ''
       : mg !== null ? `≈ ${Util.formatNum(mg, 0)} mg de nicotine (${Util.formatNum(st.vapeMgPerMl)} mg/ml)`
         : '<a class="link--mint" href="#/reglages">Indique le taux de nicotine</a> pour estimer les mg.';
     return `<section class="card ml-row" style="padding:12px 12px 12px 16px;gap:4px">
@@ -2729,7 +2774,7 @@ const Screens = {
           <button type="button" class="icon-btn icon-btn--ghost" data-action="ml-step" data-delta="0.1" aria-label="Plus 0,1 ml">+</button>
         </span>
       </div>
-      <span class="tiny faint">${hint}</span>
+      ${hint ? `<span class="tiny faint">${hint}</span>` : ''}
     </section>`;
   },
 
@@ -2755,12 +2800,36 @@ const Screens = {
     </button>`;
   },
 
+  /**
+   * Les 7 derniers jours en un coup d'œil : barres (observation, prises par jour)
+   * ou pastilles (arrêt : jour sans prise depuis l'arrêt).
+   */
+  weekStrip(endKey, quit) {
+    const st = Store.data.settings, today = Dates.todayKey();
+    const fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'narrow' });
+    const quitKey = quit && st.quitStart ? Dates.dayKey(st.quitStart) : null;
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const k = Dates.addDays(endKey, -i);
+      days.push({ k, n: Calc.onDay(Store.data.intakes, k).filter((x) => !quit || x.ts >= st.quitStart).length });
+    }
+    const max = Math.max(1, ...days.map((d) => d.n));
+    const cols = days.map((d, j) => {
+      const cls = d.k === today ? ' is-today' : d.k === endKey ? ' is-sel' : '';
+      const letter = `<span class="week__d">${fmt.format(Dates.keyToStart(d.k))}</span>`;
+      if (!quit) return `<span class="week__col${cls}" style="--j:${j}"><span class="week__bar${d.n ? ' has' : ''}" style="--h:${(d.n / max).toFixed(2)}"></span>${letter}</span>`;
+      const state = d.k < quitKey ? 'is-before' : d.n ? 'is-taken' : d.k === today ? 'is-now' : 'is-clean';
+      return `<span class="week__col${cls}" style="--j:${j}"><span class="week__dot ${state}">${state === 'is-clean' ? Icon.check : ''}</span>${letter}</span>`;
+    }).join('');
+    const label = quit
+      ? `${days.filter((d) => d.k >= quitKey && d.k < today && !d.n).length} jours sans prise sur les 7 derniers`
+      : `Prises des 7 derniers jours : ${days.map((d) => d.n).join(', ')}`;
+    return `<div class="week${quit ? ' week--quit' : ''}" role="img" aria-label="${label}">${cols}</div>`;
+  },
+
   todayEmpty(isToday) {
     return `<div class="card card--empty">
       <strong>${isToday ? 'Rien de noté aujourd’hui.' : 'Rien de noté ce jour-là.'}</strong>
-      <span class="muted small">${isToday
-        ? 'Touche « + Snus » ou « + Vape » au moment d’une prise. L’heure est notée toute seule, le reste est facultatif.'
-        : 'Si tu as oublié une prise, ajoute-la ci-dessous avec son heure.'}</span>
     </div>`;
   },
 
@@ -3159,9 +3228,8 @@ const Screens = {
   forYou(title) {
     const pr = Store.data.settings.profile;
     const cards = pr.done ? Screens.benefitCards(pr, true) : '';
-    if (cards) return `<section class="stack" style="gap:12px"><div class="stack" style="gap:2px"><h2 class="sec-title">${title}</h2><span class="sec-sub">Selon tes réponses au questionnaire</span></div>
-      <div class="card bf-list">${cards}</div>
-      <a class="link" href="#/bienvenue" data-action="quiz-start" style="align-self:center">Modifier mes réponses</a></section>`;
+    if (cards) return `<section class="stack" style="gap:12px"><div class="stack" style="gap:2px"><h2 class="sec-title">${title}</h2></div>
+      <div class="card bf-list">${cards}</div></section>`;
     return `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
       <strong>Personnalise tes bénéfices</strong>
       <span class="small muted">Quatre questions (tension, stress, sommeil…) pour voir ce que l'arrêt peut t'apporter, à toi.</span></a>`;
@@ -3179,8 +3247,7 @@ const Screens = {
     const stage = Calc.stageInfo(streak.current);
     const done = states.filter((m) => m.state === 'done').length;
     return `<div class="screen corps">
-      <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="body-text">Ce qui change depuis ta dernière prise, il y a <span style="white-space:nowrap">${Screens.durationShort(streak.current)}</span>.</span></header>
+      <h1 class="title">Corps</h1>
       ${Screens.corpsHero(next, streak.current)}
       <section class="card" style="gap:14px">
         <div class="stack" style="gap:2px"><h2 class="sec-sub">En ce moment</h2><span class="now__stage">${Util.esc(stage.title)}</span></div>
@@ -3190,7 +3257,7 @@ const Screens = {
       ${Screens.systemsCard(streak.current, true)}
       ${Screens.fold('Repères', Screens.timeline(states), `${done} sur ${states.length} atteint${done > 1 ? 's' : ''}`)}
       ${Screens.forYou('Pour toi')}
-      ${hadIntake ? '<p class="small muted">Les repères repartent de ta dernière prise, mais ton total de jours sans nicotine reste dans Stats.</p>' : ''}
+      ${hadIntake ? '<p class="tiny faint">Les repères comptent depuis ta dernière prise.</p>' : ''}
       ${Screens.corpsNote()}
     </div>`;
   },
@@ -3243,11 +3310,11 @@ const Screens = {
         <span class="sys__text">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
       </div>`;
     }).join('');
-    return `${rows}<p class="sec-sub" style="font-size:13px">Durées indicatives : chacun récupère à son rythme.</p>`;
+    return rows;
   },
 
   corpsNote() {
-    return '<p class="tiny faint">Repères généraux pour le snus et la vape, variables d’une personne à l’autre. Ce n’est pas un avis médical : en cas de doute, parles-en à un professionnel de santé.</p>';
+    return '<p class="tiny faint">Durées indicatives, variables d’une personne à l’autre. Pas un avis médical.</p>';
   },
 
   /** Frise : nœud + trait à gauche, texte à droite, détail dépliable. */
@@ -3277,25 +3344,20 @@ const Screens = {
     const mlAvg = Calc.mlAverage(Store.data.vapeMl, Dates.addDays(Dates.todayKey(), -7), Dates.addDays(Dates.todayKey(), -1));
     const mg = (avg && st.snusMg > 0 ? avg.snus * st.snusMg : 0) + (mlAvg && st.vapeMgPerMl > 0 ? mlAvg.ml * st.vapeMgPerMl : 0);
     const intro = rate
-      ? `Avec environ ${Util.formatNum(rate, 0)} prises par jour${mg ? ` (≈ ${Util.formatNum(mg, 0)} mg de nicotine)` : ''}, ton corps reçoit un stimulant plusieurs fois par jour :`
-      : 'À chaque prise, ton corps reçoit un stimulant :';
+      ? `Environ ${Util.formatNum(rate, 0)} prises par jour${mg ? ` (≈ ${Util.formatNum(mg, 0)} mg)` : ''}. À chaque prise :`
+      : 'À chaque prise :';
     return `<div class="screen corps">
-      <header class="stack" style="gap:6px"><h1 class="title">Corps</h1>
-        <span class="body-text">Ce que fait la nicotine aujourd'hui, et ce qui change quand on arrête.</span></header>
+      <h1 class="title">Corps</h1>
       <section class="card" style="gap:12px">
         <h2 class="sec-title">La nicotine dans ton corps</h2>
         <p class="body-text" style="color:var(--text)">${Util.esc(intro)}</p>
-        <ul class="effects">${Calc.forUsage(NICOTINE_EFFECTS, usage).map((e) => `<li>${Util.esc(e.text)}</li>`).join('')}</ul>
-        <p class="body-text" style="color:var(--mint)">La bonne nouvelle : la plupart de ces effets s’inversent après l’arrêt, souvent plus vite qu’on ne le pense.</p>
+        <ul class="effects">${Calc.forUsage(NICOTINE_EFFECTS, usage).slice(0, 4).map((e) => `<li>${Util.esc(e.text)}</li>`).join('')}</ul>
+        <p class="body-text" style="color:var(--mint)">La plupart s’inversent après l’arrêt.</p>
       </section>
       ${Screens.systemsCard(0, false)}
       ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))), `${list.length} étapes, de la 1re heure à 1 an`)}
-      ${Screens.forYou('Ce que l’arrêt peut t’apporter')}
-      <section class="card card--empty" style="gap:10px">
-        <strong>Rien ne presse.</strong>
-        <span class="small muted">Observer d'abord aide à connaître tes moments. Quand tu le sens, passe en mode arrêt : cette page suivra ta récupération, heure après heure.</span>
-        <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret" style="align-self:flex-start">Passer en mode arrêt</button>
-      </section>
+      ${Screens.forYou('Pour toi')}
+      <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret">Passer en mode arrêt</button>
       ${Screens.corpsNote()}
     </div>`;
   },
@@ -3303,60 +3365,50 @@ const Screens = {
     const s = Store.data.settings;
     const n = Store.data.intakes.length;
     const unit = s.vapeFormat === 'flacon' ? 'flacon' : 'capsule';
+    const missing = !(s.snusBoxPrice > 0) && !(s.vapeUnitPrice > 0);
+    const prices = [s.snusBoxPrice > 0 ? `snus ${Util.formatMoney(s.snusBoxPrice)}` : '', s.vapeUnitPrice > 0 ? `vape ${Util.formatMoney(s.vapeUnitPrice)}` : ''].filter(Boolean).join(' · ');
     return `<div class="screen">
       <h1 class="title">Réglages</h1>
-
-      <section class="stack">
-        <h2 class="label">Apparence</h2>
-        ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
-      </section>
 
       ${Screens.modeSection(s)}
 
       <section class="stack">
-        <h2 class="label">Profil</h2>
-        <div class="group"><div class="field">
-          <span class="field__label"><span>Questionnaire</span><span class="tiny faint">${Screens.profileSummary(s.profile)}</span></span>
-          <a class="link link--mint" href="#/bienvenue" data-action="quiz-start">${s.profile.done ? 'Refaire' : 'Répondre'}</a>
-        </div>
-        <label class="stack" style="gap:6px;padding:12px 0"><span class="field__label"><span>Ta raison d’arrêter</span><span class="tiny faint">Elle s’affiche quand tu as une envie</span></span>
-          <span class="field__box" style="width:100%"><input type="text" data-profile="why" maxlength="140" value="${Util.esc(s.profile.why)}" placeholder="En une phrase (facultatif)" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>
+        <h2 class="label">Motivation</h2>
+        <div class="group">
+          <label class="field field--text"><span class="field__mini">Ta raison d’arrêter</span>
+            <input type="text" data-profile="why" maxlength="140" value="${Util.esc(s.profile.why)}" placeholder="En une phrase" autocomplete="off"></label>
+          <label class="field field--text"><span class="field__mini">Objectif d’achat</span>
+            <input type="text" data-goal="name" maxlength="40" value="${Util.esc(s.goalName)}" placeholder="Un vélo, un week-end…" autocomplete="off"></label>
+          ${Screens.field('goalPrice', 'Prix de l’objectif', s.goalPrice, 'CHF', 'decimal')}
+          <div class="field"><span class="field__label">Questionnaire</span>
+            <a class="link link--mint" href="#/bienvenue" data-action="quiz-start">${s.profile.done ? 'Refaire' : 'Répondre'}</a></div>
         </div>
       </section>
 
       <section class="stack">
-        <h2 class="label">Objectif d’achat</h2>
-        <div class="group">
-          <label class="stack" style="gap:6px;padding:12px 0"><span class="field__label"><span>Ce que tu veux t’offrir</span><span class="tiny faint">${s.phase === 'arret' ? 'L’argent économisé le remplit, sur l’écran Aujourd’hui' : 'Il se remplira avec l’argent économisé, une fois en mode arrêt'}</span></span>
-            <span class="field__box" style="width:100%"><input type="text" data-goal="name" maxlength="40" value="${Util.esc(s.goalName)}" placeholder="Un vélo, un week-end… (facultatif)" style="text-align:left;font-family:var(--font-text)" autocomplete="off"></span></label>
-          ${Screens.field('goalPrice', 'Prix', s.goalPrice, 'CHF', 'decimal')}
-        </div>
+        <h2 class="label">Prix et dosage</h2>
+        <details class="faq fold"${missing ? ' open' : ''}>
+          <summary><span style="font-weight:700">Snus et vape</span><span class="sec-sub"${missing ? ' style="color:var(--warm)"' : ''}>${missing ? 'Prix à renseigner' : Util.esc(prices)}</span></summary>
+          <div class="faq__body fold__body" style="gap:0">
+            <span class="label" style="padding:4px 0 0">Snus</span>
+            ${Screens.field('snusBoxPrice', 'Prix d’une boîte', s.snusBoxPrice, 'CHF', 'decimal')}
+            ${Screens.field('snusPerBox', 'Portions par boîte', s.snusPerBox, '', 'numeric')}
+            ${Screens.field('snusMg', 'Force par portion', s.snusMg, 'mg', 'decimal')}
+            <span class="label" style="padding:16px 0 10px">Vape</span>
+            ${Screens.segmented('vapeFormat', [['capsule', 'Capsule'], ['flacon', 'Flacon']], s.vapeFormat, 'Format')}
+            ${Screens.field('vapeUnitPrice', `Prix d’${unit === 'flacon' ? 'un flacon' : 'une capsule'}`, s.vapeUnitPrice, 'CHF', 'decimal')}
+            ${Screens.field('vapeMlPerUnit', 'Contenance', s.vapeMlPerUnit, 'ml', 'decimal')}
+            ${Screens.field('vapeMgPerMl', 'Taux de nicotine', s.vapeMgPerMl, 'mg/ml', 'decimal')}
+            ${Screens.field('vapeSessionsPerUnit', `Sessions par ${unit}`, s.vapeSessionsPerUnit, '', 'numeric')}
+          </div>
+        </details>
       </section>
 
       <section class="stack">
-        <h2 class="label">Relevé</h2>
+        <h2 class="label">Préférences</h2>
+        ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
         <div class="group">
-          ${Screens.toggle('askContext', 'Demander le contexte', 'Après « + Snus » ou « + Vape », ouvrir le choix du déclencheur', s.askContext)}
-        </div>
-      </section>
-
-      <section class="stack">
-        <h2 class="label">Snus</h2>
-        <div class="group">
-          ${Screens.field('snusBoxPrice', 'Prix d’une boîte', s.snusBoxPrice, 'CHF', 'decimal')}
-          ${Screens.field('snusPerBox', 'Portions par boîte', s.snusPerBox, '', 'numeric')}
-          ${Screens.field('snusMg', 'Force par portion', s.snusMg, 'mg', 'decimal')}
-        </div>
-      </section>
-
-      <section class="stack">
-        <h2 class="label">Vape</h2>
-        ${Screens.segmented('vapeFormat', [['capsule', 'Capsule'], ['flacon', 'Flacon']], s.vapeFormat, 'Format')}
-        <div class="group">
-          ${Screens.field('vapeUnitPrice', `Prix d’${unit === 'flacon' ? 'un flacon' : 'une capsule'}`, s.vapeUnitPrice, 'CHF', 'decimal')}
-          ${Screens.field('vapeMlPerUnit', 'Contenance', s.vapeMlPerUnit, 'ml', 'decimal')}
-          ${Screens.field('vapeMgPerMl', 'Taux de nicotine', s.vapeMgPerMl, 'mg/ml', 'decimal', 'Indiqué sur le flacon ou la capsule (ex. 20 mg/ml)')}
-          ${Screens.field('vapeSessionsPerUnit', `Sessions par ${unit}`, s.vapeSessionsPerUnit, '', 'numeric', 'Sert les jours où tu ne notes pas les ml')}
+          ${Screens.toggle('askContext', 'Noter le déclencheur', '', s.askContext)}
         </div>
       </section>
 
@@ -3367,19 +3419,14 @@ const Screens = {
           <button type="button" class="btn btn--surface" data-action="import">Importer</button>
         </div>
         <a class="btn btn--surface" href="#/historique">Historique des prises</a>
-        <button type="button" class="link" data-action="wipe-ask" style="align-self:center">Effacer toutes les données</button>
-        <p class="tiny faint">${Screens.backupHint(s.lastExportAt, n)}</p>
-        <p class="tiny faint">Tout reste sur ce téléphone. iOS peut effacer les données d'une web app peu utilisée : exporte de temps en temps.${App.persisted === true ? ' Safari a accepté de protéger ce stockage.' : ''}</p>
+        <p class="tiny faint" style="text-align:center">${Screens.backupHint(s.lastExportAt, n)}</p>
       </section>
 
-      <section class="stack">
-        <h2 class="label">Aide</h2>
-        <a class="btn btn--surface" href="#/aide">Comment fonctionne STASE</a>
-      </section>
-
-      <div class="stack" style="align-items:center;gap:0">
-        <p class="tiny faint">STASE ${APP_VERSION}</p>
+      <div class="stack" style="align-items:center;gap:4px">
+        <a class="link link--mint" href="#/aide">Aide</a>
         <button type="button" class="link" data-action="update-check">Rechercher une mise à jour</button>
+        <button type="button" class="link" data-action="wipe-ask">Effacer toutes les données</button>
+        <p class="tiny faint">STASE ${APP_VERSION}</p>
       </div>
     </div>`;
   },
@@ -3405,16 +3452,13 @@ const Screens = {
         <button type="button" data-action="phase-ask" data-value="observation" aria-pressed="${!arret}">Observation</button>
         <button type="button" data-action="phase-ask" data-value="arret" aria-pressed="${arret}">Arrêt</button>
       </div>
-      <p class="small muted">${arret
-        ? 'Le compteur part de ta dernière prise. Les stats montrent tes jours sans nicotine, tes envies et tes économies.'
-        : 'Tu notes sans objectif. Passe en arrêt quand tu le sens : ta moyenne réelle servira de référence.'}</p>
       ${arret ? `<div class="group">
         <div class="field"><span class="field__label">Début de l'arrêt</span><span class="muted small">${Util.esc(Dates.formatDayShort(s.quitStart))}, ${Dates.formatTime(s.quitStart)}</span></div>
         <div class="field"><span class="field__label"><span>Référence</span><span class="tiny faint">${b ? `${Util.formatNum(b.snusPerDay, 1)} snus · ${Util.formatNum(b.vapePerDay, 1)} vape${b.vapeMlPerDay !== null ? ` (${Util.formatNum(b.vapeMlPerDay, 1)} ml)` : ''} par jour${b.days ? ` · ${b.days} j d'observation` : ''}` : 'non renseignée'}</span></span>
           <button type="button" class="link link--mint" data-action="baseline-edit">Modifier</button></div>
       </div>` : `<div class="group">
-        ${Screens.toggleRow('reduction-toggle', 'Réduction progressive', 'Baisser doucement avant d’arrêter', red.on)}
-        ${red.on ? `<div class="field"><span class="field__label"><span>Baisse par semaine</span><span class="tiny faint">Cible du jour : ${target} (départ ${Util.formatNum(red.base, 1)})</span></span>
+        ${Screens.toggleRow('reduction-toggle', 'Réduction progressive', '', red.on)}
+        ${red.on ? `<div class="field"><span class="field__label"><span>Baisse par semaine</span><span class="tiny faint">Cible du jour : ${target}</span></span>
           <div class="segmented" style="width:168px" role="group" aria-label="Baisse par semaine">${[[0.5, '0,5'], [1, '1'], [2, '2']].map(([v, l]) =>
             `<button type="button" data-action="reduction-step" data-value="${v}" aria-pressed="${red.weeklyStep === v}">${l}</button>`).join('')}</div></div>` : ''}
       </div>`}
@@ -4327,14 +4371,17 @@ const App = {
     });
     window.addEventListener('error', () => UI.toast('Un petit souci est survenu. Tes données sont intactes.'));
     Update.init();
-    // Une envie en cours avant un rechargement d'iOS : on y revient.
-    if (Craving.restore() && (!location.hash || location.hash === '#/aujourdhui')) history.replaceState(null, '', '#/envie');
-    // Premier lancement : questionnaire de départ (une seule fois, passable).
-    const s = Store.data.settings;
-    if (!s.profile.done && !Store.data.intakes.length && !location.hash) history.replaceState(null, '', '#/bienvenue');
-    // Écran d'ouverture : pas après un « Recharger » de mise à jour ni sur une envie en cours.
+    // Après un « Recharger » de mise à jour, on reste sur l'écran en cours ; sinon l'app s'ouvre
+    // toujours sur Aujourd'hui (iOS rouvre sinon la dernière adresse, par exemple les Réglages).
     let reloaded = false;
     try { reloaded = sessionStorage.getItem('stase.reload') === '1'; sessionStorage.removeItem('stase.reload'); } catch (e) { /* rien */ }
+    const s = Store.data.settings;
+    let start = reloaded && location.hash ? location.hash : '#/aujourdhui';
+    // Premier lancement : questionnaire de départ (une seule fois, passable).
+    if (!reloaded && !s.profile.done && !Store.data.intakes.length) start = '#/bienvenue';
+    // Une envie en cours avant un rechargement d'iOS : on y revient.
+    if (Craving.restore() && start === '#/aujourdhui') start = '#/envie';
+    if (location.hash !== start) history.replaceState(null, '', start);
     if (!reloaded && App.route() !== 'envie') Anim.splash();
     App.render();
   }

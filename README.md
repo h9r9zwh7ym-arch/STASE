@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.4**
+**Version 2.5**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -22,6 +22,8 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 - **J'ai une envie** : minuteur de 10 minutes, respiration guidée, rappel de tes raisons d'arrêter (ta phrase, tes progrès, tes bénéfices), mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
 - **Corps** : en observation, ce que fait la nicotine (avec tes chiffres) et ce qui récupère après l'arrêt ; en arrêt, anneau vers le prochain repère, « En ce moment » (ce qui est normal, ce qui aide), récupération par système (cœur, cerveau, sommeil, humeur, envies, bouche ou gorge), bénéfices personnalisés et frise de 12 repères détaillés. La récupération par système et la frise sont repliées par défaut ; les bénéfices « Pour toi » forment une liste à déplier. Tendances générales, pas un avis médical.
+- **Ouverture** toujours sur Aujourd'hui (sauf juste après « Recharger » ou pendant une envie en cours), avec la semaine en un coup d'œil (barres en observation, pastilles en arrêt).
+- **Réglages** regroupés : Mode, Motivation (raison, objectif d'achat), Prix et dosage (replié), Préférences, Données.
 - **Aide** intégrée (Réglages → Aide) : fonctionnement, calculs, sauvegarde, ressources (Ligne stop-tabac 0848 000 181).
 - **Mises à jour** : recherchées à l'ouverture, « Recharger » quand une nouvelle version est prête.
 - **Sécurité** : aucune ressource externe ni envoi de données (politique de sécurité du contenu stricte), import validé champ par champ, anti double-tap.
