@@ -511,14 +511,14 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    6. Feuille du bas, toast
    ========================================================================= */
-.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; transition: opacity .2s; }
+.scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; transition: opacity .15s; }
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
   max-height: calc(100dvh - var(--safe-top) - 24px); overflow-y: auto;
   background: var(--sheet); border-top: 1px solid var(--line); border-radius: 28px 28px 0 0;
   padding: 12px var(--gutter) calc(var(--safe-bottom) + 28px);
   display: flex; flex-direction: column; gap: 22px;
-  transform: translateY(100%); transition: transform .25s ease-out;
+  transform: translateY(100%); transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .sheet__grabber { align-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line); }
 .sheet-open .scrim { opacity: 1; }
@@ -540,14 +540,16 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Animations — discrètes, une seule fois à l'arrivée sur un écran
    ========================================================================= */
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes growY { from { transform: scaleY(0); } }
 @keyframes growX { from { transform: scaleX(0); } }
 @keyframes pop { from { opacity: 0; transform: scale(0.6); } }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes fadeIn { from { opacity: 0; } }
 @keyframes bump { 40% { transform: scale(1.09); } }
-.is-entering > * { animation: rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.is-entering > * { animation: rise 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 22ms); }
+/* Le relevé ne doit jamais attendre une animation. */
+.is-entering > .no-enter { animation: none; }
 .is-entering .chart rect { transform-box: fill-box; }
 .is-entering .chart rect.c-data, .is-entering .chart rect.c-data-hi, .is-entering .chart rect.c-warm,
 .is-entering .chart rect.c-warm-hi, .is-entering .chart rect.c-empty {
@@ -623,17 +625,11 @@ details.benefit[open] .benefit__more { display: none; }
 @keyframes fabGlow { 50% { opacity: 1; } }
 .done-mark { position: relative; }
 .milestone-new { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.splash { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; transition: opacity 0.35s ease; }
-.splash.out { opacity: 0; pointer-events: none; }
-.splash__s { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.75s cubic-bezier(0.6, 0, 0.3, 1) 0.05s forwards; }
-.splash__word { opacity: 0; letter-spacing: 0.8em; animation: wordIn 0.6s ease-out 0.35s forwards; }
-@keyframes wordIn { to { opacity: 1; letter-spacing: 0.42em; } }
 .breath::before { content: ''; position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle, var(--mint-dim) 0%, transparent 70%);
   animation: breathe 10s ease-in-out infinite; animation-delay: inherit; animation-play-state: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
-  .splash { display: none; }
 }
 
 /* =========================================================================
@@ -681,7 +677,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.6.1';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2208,7 +2204,7 @@ const Anim = {
   enter(view) {
     const screen = view.querySelector('.screen');
     if (!screen || Anim.reduced()) return;
-    [...screen.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 10)));
+    [...screen.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 6)));
     screen.classList.add('is-entering');
     screen.querySelectorAll('[data-countup]').forEach(Anim.countUp);
   },
@@ -2277,20 +2273,6 @@ const Anim = {
   },
 
   /** Écran d'ouverture : le S se dessine, le nom apparaît (moins d'une seconde, touche pour passer). */
-  splash() {
-    if (Anim.reduced()) return;
-    const el = document.createElement('div');
-    el.className = 'splash';
-    el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = `<svg viewBox="0 0 1024 1024" width="96" height="96"><defs><linearGradient id="sp-s" x1="0" y1="240" x2="0" y2="784" gradientUnits="userSpaceOnUse"><stop offset="0.1" stop-color="#F2B36B"/><stop offset="0.9" stop-color="#5EE6C4"/></linearGradient></defs>
-      <path class="splash__s" pathLength="1" d="M664 256 H512 A128 128 0 0 0 512 512 A128 128 0 0 1 512 768 H360" fill="none" stroke="url(#sp-s)" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="wordmark splash__word">STASE</span>`;
-    document.body.appendChild(el);
-    const out = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
-    el.addEventListener('click', out);
-    setTimeout(out, 1000);
-  },
-
   /** Montant qui défile de 0 à sa valeur (affichage final identique). */
   countUp(el) {
     const to = Number(el.dataset.countup);
@@ -2456,8 +2438,8 @@ const Screens = {
   /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
   logButtons() {
     const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
-    const btn = (t) => `<button type="button" class="log-btn${types.length === 1 ? ' log-btn--solo' : ''}" data-action="add-intake" data-type="${t}">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</button>`;
-    return types.length === 1 ? btn(types[0]) : `<div class="grid-2">${types.map(btn).join('')}</div>`;
+    const btn = (t) => `<button type="button" class="log-btn${types.length === 1 ? ' log-btn--solo no-enter' : ''}" data-action="add-intake" data-type="${t}">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</button>`;
+    return types.length === 1 ? btn(types[0]) : `<div class="grid-2 no-enter">${types.map(btn).join('')}</div>`;
   },
 
   /** Aujourd'hui (observation) : un bénéfice du profil, différent chaque jour. */
@@ -4399,7 +4381,7 @@ const App = {
     Store.load();
     UI.applyTheme();
     if (navigator.storage && navigator.storage.persist) {
-      navigator.storage.persist().then((ok) => { App.persisted = ok; }).catch(() => {});
+      setTimeout(() => navigator.storage.persist().then((ok) => { App.persisted = ok; }).catch(() => {}), 1500);
     }
     document.addEventListener('click', App.onClick);
     // Rien ne se fait glisser hors des zones qui défilent (barre d'onglets, fond de feuille…).
@@ -4410,7 +4392,14 @@ const App = {
     document.addEventListener('change', App.onChange);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) UI.closeSheet(); });
     window.addEventListener('hashchange', App.onRoute);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) App.checkDayChange(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { App.hiddenAt = Date.now(); return; }
+      // Revenu après plus de 2 minutes : retour direct sur Aujourd'hui, prêt à noter.
+      const away = App.hiddenAt && Date.now() - App.hiddenAt > 2 * 60000;
+      App.hiddenAt = null;
+      if (away && !UI.sheetState && !['aujourdhui', 'envie', 'bienvenue'].includes(App.route())) { App.viewDay = null; App.go('#/aujourdhui'); }
+      App.checkDayChange();
+    });
     setInterval(App.checkDayChange, 30000);
     setInterval(App.tick, 1000);
     if (new URLSearchParams(location.search).has('test')) { App.testMode = true; Tests.run(); return; }
@@ -4421,7 +4410,6 @@ const App = {
       if (!UI.sheetState) App.render();
     });
     window.addEventListener('error', () => UI.toast('Un petit souci est survenu. Tes données sont intactes.'));
-    Update.init();
     // Après un « Recharger » de mise à jour, on reste sur l'écran en cours ; sinon l'app s'ouvre
     // toujours sur Aujourd'hui (iOS rouvre sinon la dernière adresse, par exemple les Réglages).
     let reloaded = false;
@@ -4433,7 +4421,8 @@ const App = {
     // Une envie en cours avant un rechargement d'iOS : on y revient.
     if (Craving.restore() && start === '#/aujourdhui') start = '#/envie';
     if (location.hash !== start) history.replaceState(null, '', start);
-    if (!reloaded && App.route() !== 'envie') Anim.splash();
+    // Premier affichage d'abord ; la recherche de mise à jour attend un instant.
+    setTimeout(Update.init, 800);
     App.render();
   }
 };
