@@ -249,9 +249,10 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
 .scale--warm .scale-btn[aria-pressed="true"] { background: var(--warm); color: var(--on-warm); border-color: var(--warm); }
 
 .segmented { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; background: var(--surface); border-radius: 16px; padding: 4px; }
-.segmented button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font-size: 15px; font-weight: 600; }
-.segmented button[aria-pressed="true"] { background: var(--line); color: var(--text); }
-:root[data-theme="light"] .segmented button[aria-pressed="true"] { background: var(--surface-2); }
+.segmented label { display: flex; align-items: center; justify-content: center; }
+.segmented :is(button, label) { min-height: 48px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font-size: 15px; font-weight: 600; }
+.segmented :is(button, label)[aria-pressed="true"] { background: var(--line); color: var(--text); }
+:root[data-theme="light"] .segmented :is(button, label)[aria-pressed="true"] { background: var(--surface-2); }
 
 .group { background: var(--surface); border-radius: 20px; padding: 0 16px; }
 .group > * + * { border-top: 1px solid var(--line); }
@@ -270,6 +271,9 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
 }
 .field__unit { font-size: 14px; color: var(--text-3); white-space: nowrap; }
 
+/* Boutons « haptiques » : un <label> avec un switch invisible ; iOS vibre quand le doigt touche le switch. */
+.hap-btn { cursor: pointer; -webkit-user-select: none; user-select: none; }
+.hap { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; }
 .switch { flex: none; width: 52px; height: 32px; border-radius: 16px; border: 0; padding: 3px; background: var(--line); display: flex; }
 .switch::after { content: ''; width: 26px; height: 26px; border-radius: 13px; background: var(--text-2); transition: transform .2s; }
 .switch[aria-checked="true"] { background: var(--mint); }
@@ -563,8 +567,8 @@ details.benefit[open] .benefit__more { display: none; }
 .is-entering .tl--done .tl__node, .is-entering .tl--next .tl__node { animation: pop 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) 0.25s both; }
 .is-entering .done-mark { animation: pop 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) 0.1s both; }
 .bump { display: inline-block; animation: bump 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
-.btn, .chip, .scale-btn, .option, .icon-btn, .entry, .segmented button, .fab, .tab svg { transition: transform 0.12s ease, background-color 0.15s, color 0.15s, border-color 0.15s; }
-.btn:active, .chip:active, .scale-btn:active, .option:active, .icon-btn:active, .segmented button:active { transform: scale(0.96); }
+.btn, .chip, .scale-btn, .option, .icon-btn, .entry, .segmented :is(button, label), .fab, .tab svg { transition: transform 0.12s ease, background-color 0.15s, color 0.15s, border-color 0.15s; }
+.btn:active, .chip:active, .scale-btn:active, .option:active, .icon-btn:active, .segmented :is(button, label):active { transform: scale(0.96); }
 .entry:active { background: var(--surface); }
 .fab:active { transform: translateX(-50%) scale(0.96); }
 .tab:active svg { transform: scale(0.9); }
@@ -643,10 +647,10 @@ details.benefit[open] .benefit__more { display: none; }
 <body class="no-fab">
 <main id="view"></main>
 
-<a class="fab" href="#/envie" id="fab">
+<label class="fab hap-btn" role="button" tabindex="0" data-hap="go" data-value="#/envie" id="fab"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12c2.5-4 5.5-4 9 0s6.5 4 9 0"/></svg>
   J'ai une envie
-</a>
+</label>
 
 <nav class="tabbar" aria-label="Navigation principale">
   <a class="tab" href="#/aujourdhui" data-tab="aujourdhui">
@@ -677,7 +681,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.6.1';
+const APP_VERSION = '2.6.2';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -702,6 +706,9 @@ const FIELD_LIMITS = {
   goalPrice: { max: 100000, label: 'un prix d’objectif' }
 };
 const INTAKE_TYPES = ['snus', 'vape'];
+/** Ancienne vibration navigator.vibrate, désactivée : ignorée sur iPhone (les boutons utilisent un switch invisible). */
+const USE_LEGACY_VIBRATE = false;
+function legacyVibrate(ms) { if (USE_LEGACY_VIBRATE && navigator.vibrate) navigator.vibrate(ms); }
 
 /* =========================================================================
    Utilitaires
@@ -2438,7 +2445,7 @@ const Screens = {
   /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
   logButtons() {
     const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
-    const btn = (t) => `<button type="button" class="log-btn${types.length === 1 ? ' log-btn--solo no-enter' : ''}" data-action="add-intake" data-type="${t}">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</button>`;
+    const btn = (t) => `<label class="log-btn hap-btn${types.length === 1 ? ' log-btn--solo no-enter' : ''}" role="button" tabindex="0" data-hap="add-intake" data-type="${t}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</label>`;
     return types.length === 1 ? btn(types[0]) : `<div class="grid-2 no-enter">${types.map(btn).join('')}</div>`;
   },
 
@@ -2729,7 +2736,7 @@ const Screens = {
       ${Screens.reasonCard(el)}
       <div class="grid-2 envie-actions">
         <button type="button" class="btn" data-action="craving-pause">${c.pausedAt ? 'Reprendre' : 'Pause'}</button>
-        <button type="button" class="btn btn--primary" data-action="craving-done">C'est passé</button>
+        <label class="btn btn--primary hap-btn" role="button" tabindex="0" data-hap="craving-done"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">C'est passé</label>
       </div>
     </div>`;
   },
@@ -3375,7 +3382,7 @@ const Screens = {
       ${Screens.systemsCard(0, false)}
       ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))), `${list.length} étapes, de la 1re heure à 1 an`)}
       ${Screens.forYou('Pour toi')}
-      <button type="button" class="btn btn--surface" data-action="phase-ask" data-value="arret">Passer en mode arrêt</button>
+      <label class="btn btn--surface hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="arret"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Passer en mode arrêt</label>
       ${Screens.corpsNote()}
     </div>`;
   },
@@ -3474,8 +3481,8 @@ const Screens = {
     return `<section class="stack">
       <h2 class="label">Mode</h2>
       <div class="segmented" role="group" aria-label="Mode">
-        <button type="button" data-action="phase-ask" data-value="observation" aria-pressed="${!arret}">Observation</button>
-        <button type="button" data-action="phase-ask" data-value="arret" aria-pressed="${arret}">Arrêt</button>
+        <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="observation" aria-pressed="${!arret}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Observation</label>
+        <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="arret" aria-pressed="${arret}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Arrêt</label>
       </div>
       ${arret ? `<div class="group">
         <div class="field"><span class="field__label">Début de l'arrêt</span><span class="muted small">${Util.esc(Dates.formatDayShort(s.quitStart))}, ${Dates.formatTime(s.quitStart)}</span></div>
@@ -3494,7 +3501,7 @@ const Screens = {
   toggleRow(action, label, hint, on) {
     return `<div class="field">
       <span class="field__label"><span>${Util.esc(label)}</span>${hint ? `<span class="tiny faint">${Util.esc(hint)}</span>` : ''}</span>
-      <button type="button" class="switch" role="switch" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-action="${action}"></button>
+      <label class="switch hap-btn" role="switch" tabindex="0" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-hap="${action}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true"></label>
     </div>`;
   },
 
@@ -3517,7 +3524,7 @@ const Screens = {
   toggle(key, label, hint, on) {
     return `<div class="field">
       <span class="field__label"><span>${Util.esc(label)}</span>${hint ? `<span class="tiny faint">${Util.esc(hint)}</span>` : ''}</span>
-      <button type="button" class="switch" role="switch" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-action="toggle-setting" data-key="${key}"></button>
+      <label class="switch hap-btn" role="switch" tabindex="0" aria-checked="${!!on}" aria-label="${Util.esc(label)}" data-hap="toggle-setting" data-key="${key}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true"></label>
     </div>`;
   },
 
@@ -3727,7 +3734,7 @@ const PhaseSheet = {
         ${PhaseSheet.baselineFields(snus, vape, ml)}</div>
       <div class="grid-2">
         <button type="button" class="btn" data-action="close-sheet">Pas encore</button>
-        <button type="button" class="btn btn--primary" data-action="quit-confirm">Commencer</button>
+        <label class="btn btn--primary hap-btn" role="button" tabindex="0" data-hap="quit-confirm"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Commencer</label>
       </div>`;
   },
 
@@ -3823,6 +3830,7 @@ const Actions = {
     Store.update((d) => { d.settings[key] = !d.settings[key]; });
   },
 
+  go(el) { App.go(el.dataset.value); },
   'set-uses'(el) {
     if (!['snus', 'vape', 'both'].includes(el.dataset.value)) return;
     Store.update((d) => { d.settings.profile.uses = el.dataset.value; });
@@ -4331,6 +4339,27 @@ const App = {
     if (App.afterRoute) { const fn = App.afterRoute; App.afterRoute = null; fn(); }
   },
 
+  /** Exécute une action (anti double-tap : même action sur le même élément en moins de 0,35 s ignorée). */
+  fire(el, action) {
+    const sig = `${action}|${el.dataset.value || ''}|${el.dataset.key || ''}|${el.dataset.type || ''}`;
+    const now = Date.now();
+    if (!App.RAPID.includes(action) && App.lastFire && App.lastFire.sig === sig && now - App.lastFire.at < 350) return;
+    App.lastFire = { sig, at: now };
+    App.lastPick = { action, value: el.dataset.value, key: el.dataset.key };
+    legacyVibrate(10);
+    Actions[action](el);
+    Anim.pickPop();
+  },
+
+  /** Bouton haptique : le doigt touche le switch invisible, l'action part sur « change ». */
+  onHaptic(e) {
+    const input = e.target;
+    if (!input.classList || !input.classList.contains('hap')) return false;
+    const el = input.closest('[data-hap]');
+    if (el && Actions[el.dataset.hap]) App.fire(el, el.dataset.hap);
+    return true;
+  },
+
   onClick(e) {
     const link = e.target.closest('a[href^="#/"]');
     const plain = !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0;
@@ -4338,18 +4367,12 @@ const App = {
     const el = e.target.closest('[data-action]');
     if (!el || !Actions[el.dataset.action]) return;
     e.preventDefault();
-    // Anti double-tap : la même action sur le même élément en moins de 0,35 s est ignorée.
-    const sig = `${el.dataset.action}|${el.dataset.value || ''}|${el.dataset.key || ''}|${el.dataset.type || ''}`;
-    const now = Date.now();
-    if (!App.RAPID.includes(el.dataset.action) && App.lastFire && App.lastFire.sig === sig && now - App.lastFire.at < 350) return;
-    App.lastFire = { sig, at: now };
-    App.lastPick = { action: el.dataset.action, value: el.dataset.value, key: el.dataset.key };
-    Actions[el.dataset.action](el);
-    Anim.pickPop();
+    App.fire(el, el.dataset.action);
   },
 
   /** Saisie d'un réglage numérique : validée à la sortie du champ. */
   onChange(e) {
+    if (App.onHaptic(e)) return;
     const input = e.target;
     if (input.id === 'import-input') {
       if (input.files[0]) Backup.readFile(input.files[0]);
@@ -4390,7 +4413,12 @@ const App = {
       if (e.touches.length === 1 && !e.target.closest('#view, .sheet')) e.preventDefault();
     }, { passive: false });
     document.addEventListener('change', App.onChange);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) UI.closeSheet(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('sheet-open')) UI.closeSheet();
+      // Clavier : Entrée ou Espace sur un bouton haptique lance l'action directement.
+      const hb = (e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('label[data-hap]');
+      if (hb && Actions[hb.dataset.hap]) { e.preventDefault(); App.fire(hb, hb.dataset.hap); }
+    });
     window.addEventListener('hashchange', App.onRoute);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { App.hiddenAt = Date.now(); return; }
