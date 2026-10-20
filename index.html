@@ -683,7 +683,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.7.1';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2901,7 +2901,6 @@ const Screens = {
           ${c.state === 'future' ? 'disabled' : `data-action="cal-open" data-value="${c.key}"`} aria-label="${Util.esc(label(c))}">
           <span>${c.day}</span>${!arret && c.n ? `<i>${c.n}</i>` : ''}</button>`).join('')}
       </div>
-      <p class="tiny faint">${arret ? 'Menthe : jour sans nicotine. Gris : jour avec une prise. Plus clair : avant l’arrêt.' : 'Plus la case est colorée, plus il y a eu de prises. Touche un jour pour le voir.'}</p>
     </section>`;
   },
 
@@ -2925,11 +2924,11 @@ const Screens = {
       </header>
       ${Screens.insightsCard()}
       ${Screens.statsReduction(intakes, today)}
-      ${daysKnown < 3 ? `<p class="small muted">Encore ${3 - daysKnown} jour${3 - daysKnown > 1 ? 's' : ''} de relevés pour des moyennes parlantes.</p>` : ''}
       ${Screens.statsDaily(intakes, from, today, n, avg)}
       ${Screens.calendarCard()}
       ${Screens.statsHours(inRange)}
       ${Screens.statsTriggers(inRange)}
+      ${Screens.snusTotals(intakes.filter((x) => x.type === 'snus').length, false)}
       ${Screens.statsSpend(intakes, today)}
       ${Screens.statsNicotine(avg)}
     </div>`;
@@ -2948,7 +2947,7 @@ const Screens = {
         ? `<span class="value" style="font-size:24px">Cible respectée ${ok} jour${ok > 1 ? 's' : ''} sur ${days.length}</span>
            ${Charts.days(days.map((d) => ({ label: `${d.total}/${d.target}`, state: d.ok ? 'ok' : 'ko' })), 'Respect de la cible, jour par jour')}`
         : '<span class="small muted">Le suivi commence demain : aujourd’hui n’est pas terminé.</span>'}
-      <p class="small muted">Cible actuelle : ${now} par jour${next !== now ? ` · la semaine prochaine : ${next}` : ''}. Les jours au-dessus ne sont qu'un repère.</p>
+      <p class="small muted">Cible actuelle : ${now} par jour${next !== now ? ` · la semaine prochaine : ${next}` : ''}.</p>
     </section>`;
   },
 
@@ -2974,7 +2973,7 @@ const Screens = {
 
       <section class="stack" style="gap:4px;padding:0 4px">
         <span class="small muted">Jours sans nicotine</span>
-        <span class="value">${clean} <span class="small muted" style="font-family:var(--font-text);font-weight:500">jour${clean > 1 ? 's' : ''} complet${clean > 1 ? 's' : ''} sur ${Math.max(0, dayN - 1)} · le total ne repart jamais à zéro</span></span>
+        <span class="value">${clean} <span class="small muted" style="font-family:var(--font-text);font-weight:500">jour${clean > 1 ? 's' : ''} complet${clean > 1 ? 's' : ''} sur ${Math.max(0, dayN - 1)}</span></span>
       </section>
       ${Screens.calendarCard()}
 
@@ -2984,7 +2983,7 @@ const Screens = {
             <span class="value">${cravings.length}</span></div>
           ${avgInt !== null ? `<span class="small muted">intensité moy. ${Util.formatNum(avgInt, 1)}</span>` : ''}
         </div>
-        ${cravings.length ? Charts.bars(perDay, { height: 130, tone: 'warm', aria: 'Envies par jour depuis l’arrêt' }) : '<p class="small faint">Aucune envie notée. Le bouton « J’ai une envie », sur l’écran Aujourd’hui, les enregistre.</p>'}
+        ${cravings.length ? Charts.bars(perDay, { height: 130, tone: 'warm', aria: 'Envies par jour depuis l’arrêt' }) : '<p class="small faint">Aucune envie notée.</p>'}
       </section>
 
       <section class="card" style="gap:14px">
@@ -2993,14 +2992,26 @@ const Screens = {
             <span class="value value--mint">${av.money === null ? '—' : Util.formatMoney(av.money)}</span></div>
           ${av.money !== null && av.days >= 1 ? `<span class="small muted">≈ ${Util.formatMoney((av.money / av.days) * 30, 0)} par mois</span>` : ''}
         </div>
-        ${av.money !== null ? Charts.line(Charts.sample(series.map((p) => p.value), 120), 'Économies cumulées depuis l’arrêt') : '<p class="small muted">Renseigne les prix dans <a class="link--mint" href="#/reglages">Réglages</a> pour voir tes économies.</p>'}
+        ${av.money !== null ? Charts.line(Charts.sample(series.map((p) => p.value), 120), 'Économies cumulées depuis l’arrêt') : '<a class="small link--mint" href="#/reglages">Prix à renseigner</a>'}
       </section>
 
+      ${Screens.snusTotals(av.snus.avoided, true)}
       <div class="grid-2">
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Envies traversées</span><span class="value" style="font-size:28px">${traversed}</span></div>
         <div class="card" style="padding:18px;gap:6px"><span class="small muted">Durée moyenne</span><span class="value" style="font-size:28px">${avgDur !== null ? `${Math.max(1, Math.round(avgDur / 60000))} min` : '—'}</span></div>
       </div>
     </div>`;
+  },
+
+  /** Snus au total (ou évités, en arrêt) et le nombre de boîtes que ça représente. */
+  snusTotals(n, quit) {
+    if (!Calc.tracks('snus')) return '';
+    const per = Store.data.settings.snusPerBox;
+    const boxes = per > 0 ? n / per : null;
+    return `<div class="grid-2">
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">${quit ? 'Snus évités' : 'Snus au total'}</span><span class="value" style="font-size:28px">${Util.formatNum(n, 0)}</span></div>
+        <div class="card" style="padding:18px;gap:6px"><span class="small muted">${quit ? 'Boîtes évitées' : 'Boîtes'}</span><span class="value" style="font-size:28px">${boxes === null ? '—' : Util.formatNum(boxes, 1)}</span></div>
+      </div>`;
   },
 
   statsDaily(intakes, from, today, n, avg) {
@@ -3025,7 +3036,6 @@ const Screens = {
         ${delta !== null ? `<span class="small muted">${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Util.formatNum(Math.abs(delta), 1)} vs ${n} j précédents</span>` : ''}
       </div>
       ${Charts.bars(items, { avg: avg ? avg.total : null, aria: `Prises par jour sur ${n} jours` })}
-      ${avg ? `<p class="tiny faint">${Calc.usage(Store.data.settings, intakes) === 'both' ? `${Util.formatNum(avg.snus, 1)} snus et ${Util.formatNum(avg.vape, 1)} vape par jour en moyenne. ` : ''}La ligne pointillée montre la moyenne ; aujourd'hui (en clair) n'est pas fini.</p>` : ''}
     </section>`;
   },
 
@@ -3063,8 +3073,7 @@ const Screens = {
         ${tile('Cette semaine', week, Calc.usage(s, intakes) === 'both' ? `snus ${Util.formatMoney(week.snus)} · vape ${Util.formatMoney(week.vape)}` : 'depuis lundi')}
         ${tile('Ce mois', month, yearly !== null ? `≈ ${Util.formatMoney(yearly, 0)} sur un an` : 'depuis le 1er')}
       </div>
-      ${missing.length ? `<p class="small muted">Prix ${missing.map((t) => (t === 'snus' ? 'du snus' : 'de la vape')).join(' et ')} non renseigné : ces prises ne sont pas comptées.
-        <a class="link link--mint" href="#/reglages" >Renseigner</a></p>` : ''}
+      ${missing.length ? `<a class="small link--mint" href="#/reglages">Prix ${missing.map((t) => (t === 'snus' ? 'du snus' : 'de la vape')).join(' et ')} à renseigner</a>` : ''}
     </section>`;
   },
 
@@ -3084,7 +3093,6 @@ const Screens = {
       <span class="value">${total > 0 ? `≈ ${Util.formatNum(total, 0)} mg` : '—'}</span>
       ${snusMg !== null ? row('Snus', `${Util.formatNum(snusMg, 0)} mg`, `${Util.formatNum(avg.snus, 1)} portions × ${Util.formatNum(s.snusMg)} mg`) : ''}
       ${mlOk ? row('Vape', vapeMg !== null ? `${Util.formatNum(vapeMg, 0)} mg` : '—', `${Util.formatNum(mlOk.ml, 1)} ml/jour${vapeMg !== null ? ` × ${Util.formatNum(s.vapeMgPerMl)} mg/ml` : ' · taux à renseigner'} · ${mlOk.days} j notés`) : ''}
-      <p class="tiny faint">C'est la teneur des portions et du liquide : le corps n'en absorbe qu'une partie, variable selon les personnes.</p>
     </section>`;
   },
 
