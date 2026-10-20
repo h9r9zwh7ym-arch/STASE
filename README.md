@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.6.1**
+**Version 2.7**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -44,11 +44,11 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 
 ## Développement
 
-`index.html` contient toute l'app (HTML, CSS et JavaScript sans framework, sans build, polices intégrées). `sw.js`, à côté, est le service worker repris de ZESTE et ASCEN : l'app s'ouvre depuis une copie locale (même hors réseau), télécharge la nouvelle version en arrière-plan et propose « Recharger » quand elle a changé. Il ne s'active qu'en HTTPS (GitHub Pages) ou sur `localhost`.
+`index.html` contient l'app (HTML, CSS et JavaScript sans framework, sans build). À côté : `fonts/` (Manrope et Space Grotesk, OFL), `icon.png` (icône d'écran d'accueil) et `tests.js` (chargé seulement avec `?test`), pour une page plus légère au lancement. `sw.js`, à côté, est le service worker repris de ZESTE et ASCEN : l'app s'ouvre depuis une copie locale (même hors réseau), télécharge la nouvelle version en arrière-plan et propose « Recharger » quand elle a changé. Il ne s'active qu'en HTTPS (GitHub Pages) ou sur `localhost`.
 
 - **Lancer sur Mac** : ouvrir `index.html` dans Safari ou Chrome (vue mobile des outils développeur), ou `python3 -m http.server` puis http://localhost:8000.
 - **Tester sur iPhone sans publier** : `python3 -m http.server` sur le Mac, puis `http://<IP-du-Mac>:8000` sur l'iPhone (même Wi-Fi).
-- **Tests** : ouvrir `index.html?test`. Les tests tournent dans la page, sans toucher aux vraies données (calculs d'économies, dates et fuseaux, minuit, prix à zéro, constats, rendu de chaque écran…) ; le module `Demo` sert à ces tests.
+- **Tests** : ouvrir `index.html?test` (charge `tests.js`). Les tests tournent dans la page, sans toucher aux vraies données (calculs d'économies, dates et fuseaux, minuit, prix à zéro, constats, rendu de chaque écran…) ; le module `Demo` sert à ces tests.
 
 Organisation du script, dans l'ordre : `Util`, `Dates`, `Store` (stockage, migration, import/export), `Calc` (fonctions pures), `Charts` (SVG), `Craving`, `Demo`, `Messages`, `MILESTONES`, `CONCERNS`, `Intakes`, `UI`, `Screens`, feuilles, `Actions`, `Backup`, `App` (routage par `#/écran`), `Tests`.
 

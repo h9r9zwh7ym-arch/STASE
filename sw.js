@@ -4,7 +4,7 @@
 // (« Nouvelle version prête ») ; hors réseau, le téléchargement échoue en silence et rien ne casse.
 // Les données (localStorage) ne passent jamais par ici : une mise à jour ne les touche pas.
 const CACHE = "stase-v1"; // ne pas renommer : la copie en place sert à détecter les nouvelles versions
-const CORE = ["./", "./index.html"];
+const CORE = ["./", "./index.html", "./fonts/manrope.woff2", "./fonts/space-grotesk.woff2", "./icon.png"];
 // à l'installation, on ne complète que ce qui manque : remplacer la copie en place masquerait
 // la nouvelle version (plus rien à comparer) et la page ne proposerait pas « Recharger »
 self.addEventListener("install", e => {
@@ -43,6 +43,8 @@ self.addEventListener("fetch", e => {
   const key = nav ? "./index.html" : req;
   e.respondWith((async () => {
     const hit = await caches.match(key, { ignoreSearch: nav });
+    // Polices, icône… : la copie locale suffit (elles ne changent pas) ; seule la page est revérifiée.
+    if (hit && !nav) return hit;
     const update = refresh(req, key).catch(() => null);
     if (hit) { e.waitUntil(update); return hit; }
     // premier lancement : réseau, avec la copie en cache en dernier recours (aussi si le serveur répond une erreur)
