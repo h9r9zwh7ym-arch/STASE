@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.9**
+**Version 2.10**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -15,6 +15,7 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 ## Ce que fait l'app
 
 - **Snus, vape ou les deux** (Réglages → Je consomme) : un seul bouton de relevé si un seul produit, stats, prix, référence, économies et page Corps limités à ce qui est suivi. Les données ne sont jamais effacées en changeant ce choix.
+- **Plus malin** : en observation, un jour sans prise notée est un jour oublié (hors moyennes et référence) ; Aujourd'hui affiche « dernière il y a… » et « d'habitude à cette heure » ; le déclencheur habituel à cette heure est signalé d'un point ; Stats ajoute l'heure habituelle de la première prise et l'écart entre deux prises. L'onglet Corps n'apparaît qu'en mode arrêt (en observation, « Tous tes bénéfices » ouvre « Ce que l'arrêt t'apporte »).
 - **Questionnaire de départ** (facultatif) : usage, motivations, points de santé → bénéfices adaptés.
 - **La cellule** (Aujourd'hui) : elle porte le nombre de prises du jour et grossit avec lui ; chaque prise part du bouton en goutte et s'y fond (animation par ressorts, sans filtre au repos).
 - **Observation** : « + Snus » / « + Vape » en un tap, contexte facultatif (déclencheur, intensité), millilitres de vape du jour, correction après coup (Historique), réduction progressive optionnelle.

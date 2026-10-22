@@ -160,6 +160,8 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 }
 .tab svg { width: 24px; height: 24px; }
 .tab[aria-current="page"] { color: var(--mint); }
+body.mode-obs .tabbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.mode-obs .tab[data-tab="corps"] { display: none; }
 body.no-chrome .tabbar, body.no-chrome .fab, body.no-fab .fab { display: none; }
 body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 28px); }
 body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 16px); }
@@ -365,6 +367,8 @@ details.benefit[open] .benefit__more { display: none; }
 /* Corps : anneau, étape du moment, systèmes, effets */
 .sec-h { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
 .chips-soft { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip--hint { position: relative; }
+.chip--hint::after { content: ''; position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 3px; background: var(--mint); }
 .chip-soft { padding: 8px 12px; border-radius: 999px; background: var(--surface); font-size: 14px; line-height: 1.3; color: var(--text-2); }
 .chip-soft--help { background: var(--mint-dim); color: var(--mint); }
 .sysrow summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 84px auto; gap: 12px; align-items: center; min-height: 40px; font-size: 14px; }
@@ -745,7 +749,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -1139,7 +1143,9 @@ const Calc = {
   /**
    * Moyenne quotidienne sur les n jours complets précédant `todayKey`
    * (aujourd'hui exclu, car incomplet). Si l'historique est plus court,
-   * on part du jour de la première prise. Renvoie null sans jour complet.
+   * on part du jour de la première prise. Un jour sans aucune prise notée
+   * est un jour oublié, pas un jour à zéro : il ne compte pas dans la moyenne.
+   * Renvoie null sans jour noté ; `skipped` = jours ignorés.
    */
   avgPerDay(intakes, todayKey, n = 7) {
     if (!intakes.length) return null;
@@ -1148,9 +1154,11 @@ const Calc = {
     if (Dates.diffDays(from, first) > 0) from = first;
     const to = Dates.addDays(todayKey, -1);
     if (Dates.diffDays(from, to) < 0) return null;
-    const days = Calc.dailyCounts(intakes, from, to);
+    const all = Calc.dailyCounts(Calc.between(intakes, from, to), from, to);
+    const days = all.filter((d) => d.total > 0);
+    if (!days.length) return null;
     const sum = (k) => days.reduce((acc, d) => acc + d[k], 0) / days.length;
-    return { total: sum('total'), snus: sum('snus'), vape: sum('vape'), days: days.length };
+    return { total: sum('total'), snus: sum('snus'), vape: sum('vape'), days: days.length, skipped: all.length - days.length };
   }
 };
 
@@ -1248,7 +1256,8 @@ Object.assign(Calc, {
 
   /** Jour de la semaine le plus chargé (moyenne par occurrence de ce jour). */
   busiestWeekday(intakes, fromKey, toKey) {
-    const days = Calc.dailyCounts(intakes, fromKey, toKey);
+    const days = Calc.dailyCounts(intakes, fromKey, toKey).filter((d) => d.total > 0);
+    if (!days.length) return null;
     const sums = new Array(7).fill(0), seen = new Array(7).fill(0);
     days.forEach((d) => { const w = (new Date(Dates.keyToStart(d.key)).getDay() + 6) % 7; sums[w] += d.total; seen[w] += 1; });
     const overall = days.reduce((a, d) => a + d.total, 0) / days.length;
@@ -1297,10 +1306,14 @@ Object.assign(Calc, {
     if (peak.share >= 0.25) out.push(`${pct(peak.share)} % de tes prises tombent entre ${peak.from} h et ${peak.to} h.`);
     const top = Calc.topTrigger(list);
     if (top && top.share >= 0.15) out.push(`Déclencheur le plus fréquent : ${TRIGGER_PHRASE[top.key]}, environ 1 prise sur ${Math.max(2, Math.round(1 / top.share))}.`);
+    const rh = Calc.rhythm(data.intakes, Dates.addDays(todayKey, -14), to);
+    if (rh && rh.firstMin !== null) { const r = Math.round(rh.firstMin / 5) * 5; out.push(`Ta première prise arrive en général vers ${Math.floor(r / 60) % 24} h ${Dates.pad(r % 60)}.`); }
+    if (rh && rh.gapMin !== null && rh.gapMin >= 20) out.push(`En journée, environ ${rh.gapMin >= 60 ? `${Math.floor(rh.gapMin / 60)} h ${Dates.pad(Math.round(rh.gapMin % 60))}` : `${Math.round(rh.gapMin)} min`} entre deux prises.`);
     if (span >= 14) {
       const wd = Calc.busiestWeekday(data.intakes, from, to);
       if (wd && wd.ratio >= 1.2) out.push(`Le ${WEEKDAYS[wd.dow]} est ton jour le plus chargé : ${Util.formatNum(wd.avg, 1)} prises en moyenne, contre ${Util.formatNum(wd.overall, 1)}.`);
-      const avg = (a, b) => Calc.between(data.intakes, a, b).length / 7;
+      // moyenne sur les jours notés seulement
+      const avg = (a, b) => { const l = Calc.between(data.intakes, a, b); const d = new Set(l.map((x) => Dates.dayKey(x.ts))).size; return d ? l.length / d : 0; };
       const last = avg(Dates.addDays(todayKey, -7), to), prev = avg(Dates.addDays(todayKey, -14), Dates.addDays(todayKey, -8));
       if (prev > 0 && Math.abs(last - prev) / prev >= 0.1) {
         out.push(last < prev
@@ -1308,7 +1321,60 @@ Object.assign(Calc, {
           : `${pct(last / prev - 1)} % de prises en plus que la semaine d’avant. Un simple repère, rien de plus.`);
       }
     }
-    return out.slice(0, 3);
+    return out.slice(0, 4);
+  },
+
+  /**
+   * Rythme habituel sur les jours notés : heure médiane de la première prise
+   * (minutes depuis minuit) et écart médian entre deux prises d'un même jour.
+   */
+  rhythm(intakes, fromKey, toKey) {
+    const byDay = {};
+    Calc.between(intakes, fromKey, toKey).forEach((x) => { (byDay[Dates.dayKey(x.ts)] = byDay[Dates.dayKey(x.ts)] || []).push(x.ts); });
+    const days = Object.values(byDay);
+    if (days.length < 5) return null;
+    const median = (v) => { if (!v.length) return null; const a = v.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+    const firsts = days.map((ts) => { const d = new Date(Math.min(...ts)); return d.getHours() * 60 + d.getMinutes(); });
+    const gaps = [];
+    days.forEach((ts) => { const a = ts.slice().sort((x, y) => x - y); for (let i = 1; i < a.length; i++) gaps.push((a[i] - a[i - 1]) / 60000); });
+    return { firstMin: median(firsts), gapMin: gaps.length >= 5 ? median(gaps) : null };
+  },
+
+  /**
+   * « D'habitude à cette heure » : nombre moyen de prises déjà faites à cette
+   * heure-ci, sur les jours notés des 14 derniers jours (au moins 3).
+   */
+  usualByNow(intakes, todayKey, now = Date.now()) {
+    const d = new Date(now), minutes = d.getHours() * 60 + d.getMinutes();
+    const from = Dates.addDays(todayKey, -14), to = Dates.addDays(todayKey, -1);
+    const byDay = {};
+    Calc.between(intakes, from, to).forEach((x) => {
+      const k = Dates.dayKey(x.ts), t = new Date(x.ts);
+      byDay[k] = byDay[k] || { all: 0, before: 0 };
+      byDay[k].all++;
+      if (t.getHours() * 60 + t.getMinutes() <= minutes) byDay[k].before++;
+    });
+    const days = Object.values(byDay);
+    if (days.length < 3) return null;
+    return days.reduce((a, x) => a + x.before, 0) / days.length;
+  },
+
+  /**
+   * Déclencheur habituel à cette heure (±1 h, 30 derniers jours) :
+   * au moins 3 prises et 40 % d'entre elles. Mis en avant, jamais présélectionné.
+   */
+  suggestTrigger(intakes, ts) {
+    const d = new Date(ts), m = d.getHours() * 60 + d.getMinutes();
+    const counts = {}; let n = 0;
+    intakes.forEach((x) => {
+      if (!x.trigger || x.ts >= ts || ts - x.ts > 30 * DAY_MS) return;
+      const t = new Date(x.ts), mm = t.getHours() * 60 + t.getMinutes();
+      const diff = Math.min(Math.abs(mm - m), 1440 - Math.abs(mm - m));
+      if (diff > 60) return;
+      counts[x.trigger] = (counts[x.trigger] || 0) + 1; n++;
+    });
+    const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return best && best[1] >= 3 && best[1] / n >= 0.4 ? best[0] : null;
   },
 
   /** Cases du calendrier d'un mois (« AAAA-MM »), lundi en premier. */
@@ -1709,7 +1775,9 @@ Object.assign(Calc, {
     const first = Dates.dayKey(intakes[0].ts);
     const last = Dates.addDays(Dates.dayKey(quitTs), -1);
     if (Dates.diffDays(first, last) < 0) return null;
-    const days = Calc.dailyCounts(intakes.filter((x) => x.ts < quitTs), first, last);
+    // jours sans prise notée pendant l'observation = oubliés, hors référence
+    const days = Calc.dailyCounts(intakes.filter((x) => x.ts < quitTs), first, last).filter((d) => d.total > 0);
+    if (!days.length) return null;
     const sum = (k) => days.reduce((a, d) => a + d[k], 0);
     const ml = Calc.mlAverage(vapeMl, first, last);
     return { snusPerDay: sum('snus') / days.length, vapePerDay: sum('vape') / days.length, vapeMlPerDay: ml ? ml.ml : null, days: days.length };
@@ -2483,9 +2551,10 @@ const Screens = {
         ${(() => {
           const both = Calc.usage(Store.data.settings, Store.data.intakes) === 'both' || (c.snus && c.vape);
           const parts = (both ? [`${c.snus} snus`, `${c.vape} vape`] : [])
-            .concat(avg ? [`moyenne ${avg.days < 7 ? `${avg.days} j` : '7 j'} : ${Util.formatNum(avg.total, 1)}`] : []);
+            .concat(avg ? [`moyenne ${Util.formatNum(avg.total, 1)}`] : []);
           return parts.length ? `<p class="small muted">${parts.join(' <span class="faint">·</span> ')}</p>` : '';
         })()}
+        ${isToday ? Screens.todayRhythm(list) : ''}
         ${Screens.targetLine(key, c.total, isToday)}
         ${Screens.weekStrip(key, false)}
       </section>
@@ -2521,6 +2590,24 @@ const Screens = {
       <div class="cell__text"><span class="cell__num">${total}</span><span class="cell__label">${total > 1 ? 'prises' : 'prise'} aujourd’hui</span></div>
       <div class="cell-btns">${Screens.logButtons(true)}</div>
     </section>`;
+  },
+
+  /**
+   * Repères du moment, en une ligne : depuis la dernière prise (en direct)
+   * et ce qui est habituel à cette heure-ci.
+   */
+  todayRhythm(list) {
+    const parts = [];
+    const last = list.length ? list[list.length - 1].ts : null;
+    if (last) parts.push(`dernière il y a <span class="num" data-live="since-last">${Screens.agoShort(Date.now() - last)}</span>`);
+    const usual = Calc.usualByNow(Store.data.intakes, Dates.todayKey());
+    if (usual !== null) parts.push(`d’habitude à cette heure : ${Util.formatNum(usual, 1)}`);
+    return parts.length ? `<p class="small faint">${parts.join(' · ')}</p>` : '';
+  },
+
+  agoShort(ms) {
+    const m = Math.max(0, Math.floor(ms / 60000));
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${Dates.pad(m % 60)}`;
   },
 
   /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
@@ -2619,7 +2706,7 @@ const Screens = {
         <p><strong>Coût d'un snus</strong> : prix de la boîte ÷ portions. <strong>Vape</strong> : ml × prix du ml les jours où tu notes les ml, sinon sessions × prix d'une session.</p>
         <p><strong>Économies et doses évitées</strong> : ce que ta référence prévoyait depuis l'arrêt, moins ce que tu as réellement pris. Jamais négatif.</p>
         <p><strong>Nicotine</strong> : portions × mg, et ml × mg/ml. C'est la teneur, pas ce que le corps absorbe (une partie seulement).</p>
-        <p><strong>Moyennes</strong> : sur les jours complets ; aujourd'hui n'est pas encore fini. Les jours suivent le fuseau horaire du téléphone.</p>
+        <p><strong>Moyennes</strong> : sur les jours complets ; aujourd'hui n'est pas encore fini. En observation, un jour sans aucune prise notée est considéré comme oublié : il n'entre pas dans les moyennes ni dans la référence. Les jours suivent le fuseau horaire du téléphone.</p>
         <p>Un prix à zéro n'est jamais compté comme « 0 CHF » : l'app signale qu'il manque.</p>`)}
       ${q('Sauvegarde et confidentialité', `
         <p>Tes données ne quittent jamais ce téléphone : pas de compte, pas de serveur. Revers de la médaille : iOS peut effacer les données d'une web app peu utilisée.</p>
@@ -3116,7 +3203,7 @@ const Screens = {
       <div class="row" style="align-items:flex-end">
         <div class="stack" style="gap:4px">
           <span class="small muted">Prises par jour</span>
-          <span class="value">${avg ? Util.formatNum(avg.total, 1) : '—'} <span class="small muted" style="font-family:var(--font-text);font-weight:500">${avg ? `moyenne ${avg.days} j` : 'pas encore de jour complet'}</span></span>
+          <span class="value">${avg ? Util.formatNum(avg.total, 1) : '—'} <span class="small muted" style="font-family:var(--font-text);font-weight:500">${avg ? `moyenne · ${avg.days} j noté${avg.days > 1 ? 's' : ''}` : 'pas encore de jour complet'}</span></span>
         </div>
         ${delta !== null ? `<span class="small muted">${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Util.formatNum(Math.abs(delta), 1)} vs ${n} j précédents</span>` : ''}
       </div>
@@ -3478,7 +3565,8 @@ const Screens = {
       ? `Environ ${Util.formatNum(rate, 0)} prises par jour${mg ? ` (≈ ${Util.formatNum(mg, 0)} mg)` : ''}. À chaque prise :`
       : 'À chaque prise :';
     return `<div class="screen corps">
-      <h1 class="title">Corps</h1>
+      <header class="header"><h1 class="title">Ce que l’arrêt t’apporte</h1>
+        <a class="icon-btn" href="#/aujourdhui" aria-label="Retour à Aujourd’hui">${Icon.close}</a></header>
       <section class="card" style="gap:12px">
         <h2 class="sec-h">La nicotine dans ton corps</h2>
         <p class="body-text" style="color:var(--text)">${Util.esc(intro)}</p>
@@ -3676,7 +3764,7 @@ const IntakeSheet = {
         ${st.mode === 'context' ? '<p class="small muted">Facultatif. Ça aide à repérer tes moments.</p>' : ''}
       </div>
       ${st.mode === 'context' ? '' : IntakeSheet.whenHtml(st)}
-      ${IntakeSheet.triggersHtml(st.trigger)}
+      ${IntakeSheet.triggersHtml(st.trigger, Calc.suggestTrigger(Store.data.intakes, st.ts))}
       ${IntakeSheet.intensityHtml(st.intensity)}
       ${IntakeSheet.buttonsHtml(st)}`;
   },
@@ -3692,11 +3780,11 @@ const IntakeSheet = {
       </label>`;
   },
 
-  triggersHtml(current) {
+  triggersHtml(current, hint = null) {
     return `<div class="stack">
       <span class="label">Déclencheur</span>
       <div class="grid-3">${TRIGGERS.map(([k, label]) =>
-        `<button type="button" class="chip" data-action="sheet-trigger" data-value="${k}" aria-pressed="${current === k}">${label}</button>`).join('')}</div>
+        `<button type="button" class="chip${hint === k ? ' chip--hint' : ''}" data-action="sheet-trigger" data-value="${k}" aria-pressed="${current === k}"${hint === k ? ' aria-description="habituel à cette heure"' : ''}>${label}</button>`).join('')}</div>
     </div>`;
   },
 
@@ -4476,6 +4564,13 @@ const App = {
   tick() {
     const name = App.route();
     const set = (key, text) => { const el = document.querySelector(`[data-live="${key}"]`); if (el && el.textContent !== text) el.textContent = text; };
+    if (name === 'aujourdhui' && Store.data.settings.phase !== 'arret') {
+      const el = document.querySelector('[data-live="since-last"]');
+      if (el) {
+        const today = Calc.onDay(Store.data.intakes, Dates.todayKey());
+        if (today.length) { const t = Screens.agoShort(Date.now() - today[today.length - 1].ts); if (el.textContent !== t) el.textContent = t; }
+      }
+    }
     if (name === 'aujourdhui' && Store.data.settings.phase === 'arret') {
       const cur = Calc.streaks(Store.data.intakes, Store.data.settings.quitStart, Date.now()).current;
       set('since-big', Screens.sinceBig(cur));
@@ -4566,6 +4661,8 @@ const App = {
     }
     if (App.celebrate) { App.celebrate = false; Anim.burst(view.querySelector('.milestone-new .done-mark') || view.querySelector('.done-mark')); }
     document.body.classList.toggle('no-chrome', App.focused.includes(name));
+    // En observation, l'onglet Corps est masqué : la page reste accessible depuis « Tous tes bénéfices ».
+    document.body.classList.toggle('mode-obs', Store.data.settings.phase !== 'arret');
     // Le bouton « J'ai une envie » ne vit que sur l'accueil.
     document.body.classList.toggle('no-fab', name !== 'aujourdhui');
     document.querySelectorAll('.tab').forEach((t) => {

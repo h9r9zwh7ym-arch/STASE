@@ -228,9 +228,9 @@ Tests.add('référence = moyenne réelle des jours complets avant l’arrêt', (
     { type: 'snus', ts: t(4, 8) } // jour de l'arrêt : exclu
   ];
   const b = Calc.baseline(intakes, t(4, 12));
-  Tests.eq(b.days, 3); // 1, 2 et 3 septembre (le 3 sans prise compte)
-  Tests.near(b.snusPerDay, 2 / 3);
-  Tests.near(b.vapePerDay, 2 / 3);
+  Tests.eq(b.days, 2); // 1 et 2 septembre ; le 3, sans prise notée, est un jour oublié
+  Tests.near(b.snusPerDay, 1);
+  Tests.near(b.vapePerDay, 1);
   Tests.eq(Calc.baseline(intakes.slice(4), t(4, 12)), null);
 });
 Tests.add('doses évitées et économies, snus et vape séparés', () => {
@@ -615,7 +615,7 @@ Tests.add('constats : rien sans assez de données ; heures, déclencheur, tendan
     for (let i = 0; i < n; i++) d.intakes.push({ type: 'snus', ts: Dates.keyToStart(key) + (16 * 60 + i * 10) * 60000, trigger: i % 2 ? 'cafe' : null });
   }
   const out = Calc.insights(d, today);
-  Tests.eq(out.length, 3);
+  Tests.eq(out.length >= 3 && out.length <= 4, true, out.join(' | '));
   Tests.eq(/^100 % de tes prises tombent entre 1[56] h et 1[89] h\.$/.test(out[0]), true, out[0]);
   Tests.eq(out[1].includes('le café'), true, out[1]);
   Tests.eq(out.some((t) => t.startsWith('En baisse')), true, out.join(' | '));
@@ -712,4 +712,31 @@ Tests.add('corps : contenu santé prudent (repères, systèmes, étapes, effets)
   ['garanti', 'à coup sûr', 'guérit', 'définitivement', 'cigarette', 'goudron', 'monoxyde', 'échec'].forEach((w) => Tests.eq(all.includes(w), false, w));
   Tests.eq(MILESTONES.every((m) => m.more), true);
   Tests.eq(MILESTONES.every((m, i) => i === 0 || m.h > MILESTONES[i - 1].h), true);
+});
+
+/* ---- Plus malin : jours oubliés, rythme, déclencheur habituel ---- */
+Tests.add('moyenne : un jour sans prise notée est oublié, pas compté à zéro', () => {
+  const t = (d, h) => new Date(2026, 8, d, h).getTime();
+  const intakes = [{ type: 'snus', ts: t(1, 9) }, { type: 'snus', ts: t(1, 15) }, { type: 'snus', ts: t(3, 9) }, { type: 'vape', ts: t(3, 12) }];
+  const a = Calc.avgPerDay(intakes, '2026-09-05', 7);
+  Tests.eq([a.days, a.skipped], [2, 2]); // 1 et 3 notés ; 2 et 4 oubliés
+  Tests.near(a.total, 2);
+  Tests.eq(Calc.avgPerDay([{ type: 'snus', ts: t(4, 9) }], '2026-09-04', 7), null);
+});
+Tests.add('rythme : première prise et écart habituels, « d’habitude à cette heure »', () => {
+  const t = (d, h, m = 0) => new Date(2026, 8, d, h, m).getTime();
+  const intakes = [];
+  for (let d = 1; d <= 6; d++) intakes.push({ type: 'snus', ts: t(d, 8, 30) }, { type: 'snus', ts: t(d, 10, 30) }, { type: 'snus', ts: t(d, 12, 30) }, { type: 'snus', ts: t(d, 18, 30) });
+  const r = Calc.rhythm(intakes, '2026-09-01', '2026-09-06');
+  Tests.eq(r.firstMin, 8 * 60 + 30);
+  Tests.eq(r.gapMin, 120);
+  Tests.near(Calc.usualByNow(intakes, '2026-09-07', t(7, 11)), 2);
+  Tests.eq(Calc.usualByNow(intakes.slice(0, 8), '2026-09-07', t(7, 11)), null);
+});
+Tests.add('déclencheur habituel à cette heure : mis en avant seulement s’il est net', () => {
+  const t = (d, h) => new Date(2026, 8, d, h).getTime();
+  const intakes = [1, 2, 3, 4].map((d) => ({ type: 'snus', ts: t(d, 8), trigger: 'cafe' })).concat([{ type: 'snus', ts: t(5, 8), trigger: 'stress' }]);
+  Tests.eq(Calc.suggestTrigger(intakes, t(6, 8)), 'cafe');
+  Tests.eq(Calc.suggestTrigger(intakes, t(6, 15)), null);
+  Tests.eq(Calc.suggestTrigger(intakes.slice(0, 2), t(6, 8)), null);
 });
