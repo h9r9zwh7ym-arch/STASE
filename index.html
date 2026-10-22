@@ -575,6 +575,27 @@ details.benefit[open] .benefit__more { display: none; }
 .fab:active { transform: translateX(-50%) scale(0.96); }
 .tab:active svg { transform: scale(0.9); }
 
+/* Aujourd'hui : la cellule (au repos, seule la membrane se déforme ; le reste suit la physique de Cell) */
+.cellwrap { position: relative; height: 372px; margin-top: 4px; }
+.goo-layer { position: absolute; inset: 0; pointer-events: none; }
+.goo-layer.is-gooey { filter: url(#goo); }
+.cell { position: absolute; left: 50%; top: 122px; width: var(--size); height: var(--size); margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2); transform-origin: 50% 70%; }
+.cell__body { position: absolute; inset: 0; background: radial-gradient(circle at 36% 30%, #C9F5E8 0%, #A6EAD6 40%, #8EDDC6 100%);
+  border-radius: 56% 44% 53% 47% / 48% 57% 43% 52%; animation: cellMorph 14s ease-in-out infinite, cellBreathe 6s ease-in-out infinite; }
+@keyframes cellMorph { 0%, 100% { border-radius: 56% 44% 53% 47% / 48% 57% 43% 52%; } 25% { border-radius: 48% 52% 46% 54% / 55% 47% 53% 45%; } 50% { border-radius: 53% 47% 57% 43% / 45% 54% 46% 55%; } 75% { border-radius: 46% 54% 50% 50% / 52% 44% 56% 48%; } }
+@keyframes cellBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.022); } }
+.cell__text { position: absolute; left: 50%; top: 122px; width: 220px; margin-left: -110px; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; color: #0F2A23; pointer-events: none; }
+.cell__num { display: inline-block; font-family: var(--font-num); font-size: 80px; font-weight: 600; line-height: 0.92; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.cell__label { font-size: 13px; font-weight: 700; color: #24584A; }
+.goo-btns, .cell-btns { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 12px; }
+.goo-layer .goo-btn { visibility: hidden; }
+.goo-layer .goo-btn.is-active { visibility: visible; }
+.goo-btn { height: 104px; border-radius: 32px; background: linear-gradient(180deg, #B2EEDC 0%, #9FE8D2 60%, #92E0C9 100%); transform-origin: 50% 100%; }
+.cell-btns .log-btn { height: 104px; border-radius: 32px; border-color: transparent; background: transparent; color: #0F2A23; transform-origin: 50% 100%; transition: none; }
+.cell-btns .log-btn:active { background: transparent; transform: none; }
+.cell-drop { position: absolute; left: 0; top: 0; border-radius: 50%; background: #ABECD9; will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .cell__body { animation: none; } }
+
 /* Aujourd'hui : halo d'ambiance, semaine, point « en direct » */
 .ambient { position: absolute; left: 0; right: 0; top: -160px; height: 460px; overflow: hidden; pointer-events: none; }
 .ambient::before { content: ''; position: absolute; inset: 0 -15%;
@@ -648,6 +669,8 @@ details.benefit[open] .benefit__more { display: none; }
 </head>
 <body class="no-fab">
 <main id="view"></main>
+<!-- Fusion liquide de la cellule : flou + seuil d'opacité (utilisé seulement pendant une goutte). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="goo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="11" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>
 
 <label class="fab hap-btn" role="button" tabindex="0" data-hap="go" data-value="#/envie" id="fab"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12c2.5-4 5.5-4 9 0s6.5 4 9 0"/></svg>
@@ -683,7 +706,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.7.1';
+const APP_VERSION = '2.8.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2414,10 +2437,10 @@ const Screens = {
 
       <section class="stack" style="gap:6px">
         ${Screens.dayNav(key, isToday)}
-        <div class="counter">
+        ${isToday ? Screens.cellStage(c.total) : `<div class="counter">
           <span class="big-number">${c.total}</span>
-          <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ${isToday ? 'aujourd’hui' : 'ce jour-là'}</span>
-        </div>
+          <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ce jour-là</span>
+        </div>`}
         ${(() => {
           const both = Calc.usage(Store.data.settings, Store.data.intakes) === 'both' || (c.snus && c.vape);
           const parts = (both ? [`${c.snus} snus`, `${c.vape} vape`] : [])
@@ -2428,7 +2451,6 @@ const Screens = {
         ${Screens.weekStrip(key, false)}
       </section>
 
-      ${isToday ? Screens.logButtons() : ''}
       ${Screens.mlRow(key, isToday)}
 
       <section class="stack" style="gap:0">
@@ -2444,9 +2466,28 @@ const Screens = {
     </div>`;
   },
 
-  /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
-  logButtons() {
+  /**
+   * La cellule : elle porte le nombre de prises du jour et grossit avec lui.
+   * Les boutons sont juste dessous ; une prise ajoutée part du bouton en goutte
+   * et se fond dans la cellule (moteur Cell, plus bas).
+   */
+  cellStage(total) {
     const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
+    return `<section class="cellwrap no-enter" data-total="${total}" style="--n:${types.length}">
+      <div class="goo-btns btn-skins" aria-hidden="true">${types.map((t) => `<div class="goo-btn" data-stype="${t}"></div>`).join('')}</div>
+      <div class="goo-layer" aria-hidden="true">
+        <div class="cell" style="--size:${Cell.size(total)}px"><div class="cell__body"></div></div>
+        <div class="goo-btns">${types.map((t) => `<div class="goo-btn" data-gtype="${t}"></div>`).join('')}</div>
+      </div>
+      <div class="cell__text"><span class="cell__num">${total}</span><span class="cell__label">${total > 1 ? 'prises' : 'prise'} aujourd’hui</span></div>
+      <div class="cell-btns">${Screens.logButtons(true)}</div>
+    </section>`;
+  },
+
+  /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
+  logButtons(bare = false) {
+    const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
+    if (bare) return types.map((t) => `<label class="log-btn hap-btn" role="button" tabindex="0" data-hap="add-intake" data-type="${t}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</label>`).join('');
     const btn = (t) => `<label class="log-btn hap-btn${types.length === 1 ? ' log-btn--solo no-enter' : ''}" role="button" tabindex="0" data-hap="add-intake" data-type="${t}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">${Icon.plus}${t === 'snus' ? 'Snus' : 'Vape'}</label>`;
     return types.length === 1 ? btn(types[0]) : `<div class="grid-2 no-enter">${types.map(btn).join('')}</div>`;
   },
@@ -3778,6 +3819,7 @@ const Actions = {
   /* ---- Relevé ---- */
   'add-intake'(el) {
     const type = el.dataset.type;
+    Cell.spawn(type, el);
     const id = Intakes.add(type, Date.now());
     App.bumpCounter = true;
     App.render();
@@ -4177,6 +4219,161 @@ const Update = {
 };
 
 /* =========================================================================
+   Cell — la cellule d'Aujourd'hui, animée par ressorts (vitesse toujours continue)
+   ========================================================================= */
+const Cell = {
+  sim: { size: null, sizeV: 0, s: 0, sv: 0, b: { snus: 0, vape: 0 }, bv: { snus: 0, vape: 0 }, drops: [], pending: 0, numT: 1 },
+  els: null,
+  raf: null,
+  last: 0,
+  CY: 122,
+
+  /** Diamètre selon le nombre de prises du jour : elle « porte » la journée. */
+  size(n) { return Math.min(220, 150 + n * 7); },
+
+  /** Une goutte naît dans le bouton touché (appelé avant le rendu, le bouton est encore là). */
+  spawn(type, btn) {
+    const wrap = document.querySelector('.cellwrap');
+    if (!wrap || !btn || Anim.reduced()) return;
+    const w = wrap.getBoundingClientRect(), r = btn.getBoundingClientRect();
+    const m = Cell.sim;
+    m.bv[type] = (m.bv[type] || 0) - 2.4; // l'appui écrase le bouton, qui rebondit tout seul
+    m.drops.push({ type, x: r.left + r.width / 2 - w.left, y: r.top - w.top + 38, vx: 0, vy: -60, r: 0, age: 0, merged: false, el: null });
+    m.pending++;
+  },
+
+  /** Après chaque rendu : retrouve les éléments et reprend l'animation en cours. */
+  sync() {
+    const wrap = document.querySelector('.cellwrap');
+    const m = Cell.sim;
+    if (!wrap) { Cell.els = null; m.drops = []; m.pending = 0; return; }
+    const total = Number(wrap.dataset.total) || 0;
+    m.pending = Math.min(m.pending, total);
+    Cell.els = {
+      wrap, total,
+      layer: wrap.querySelector('.goo-layer'),
+      cell: wrap.querySelector('.cell'),
+      text: wrap.querySelector('.cell__text'),
+      num: wrap.querySelector('.cell__num'),
+      label: wrap.querySelector('.cell__label'),
+      gooBtns: Object.fromEntries([...wrap.querySelectorAll('.goo-layer .goo-btn')].map((e) => [e.dataset.gtype, e])),
+      skins: Object.fromEntries([...wrap.querySelectorAll('.btn-skins .goo-btn')].map((e) => [e.dataset.stype, e])),
+      btns: Object.fromEntries([...wrap.querySelectorAll('.cell-btns .log-btn')].map((e) => [e.dataset.type, e]))
+    };
+    if (m.size === null) m.size = Cell.size(total - m.pending);
+    m.drops.forEach((d) => {
+      d.el = document.createElement('span');
+      d.el.className = 'cell-drop';
+      Cell.els.layer.appendChild(d.el);
+    });
+    Cell.showCount();
+    Cell.apply();
+    if (Cell.busy()) Cell.start();
+  },
+
+  /** Le chiffre affiché suit les gouttes absorbées, pas le toucher. */
+  showCount() {
+    const e = Cell.els;
+    if (!e) return;
+    const n = e.total - Cell.sim.pending;
+    e.num.textContent = n;
+    e.label.textContent = `${n > 1 ? 'prises' : 'prise'} aujourd’hui`;
+  },
+
+  busy() {
+    const m = Cell.sim;
+    const target = Cell.els ? Cell.size(Cell.els.total - m.pending) : m.size;
+    return m.drops.length > 0 || Math.abs(m.s) > 0.002 || Math.abs(m.sv) > 0.01 || m.numT < 1
+      || Math.abs(target - m.size) > 0.3 || Math.abs(m.sizeV) > 0.3
+      || ['snus', 'vape'].some((t) => Math.abs(m.b[t]) > 0.001 || Math.abs(m.bv[t]) > 0.01);
+  },
+
+  start() {
+    if (Cell.raf) return;
+    Cell.last = performance.now();
+    const loop = (now) => {
+      const dt = Math.min(0.033, (now - Cell.last) / 1000);
+      Cell.last = now;
+      if (!Cell.els || !Cell.els.wrap.isConnected) { Cell.raf = null; return; }
+      Cell.step(dt / 2); Cell.step(dt / 2);
+      Cell.apply();
+      if (Cell.busy()) Cell.raf = requestAnimationFrame(loop);
+      else Cell.raf = null;
+    };
+    Cell.raf = requestAnimationFrame(loop);
+  },
+
+  step(dt) {
+    const m = Cell.sim, e = Cell.els;
+    const cx = e.wrap.clientWidth / 2, cy = Cell.CY, R = m.size / 2;
+    const target = Cell.size(e.total - m.pending);
+    m.sizeV += (90 * (target - m.size) - 11 * m.sizeV) * dt; m.size += m.sizeV * dt;
+    m.sv += (-150 * m.s - 5.5 * m.sv) * dt; m.s += m.sv * dt;
+    ['snus', 'vape'].forEach((t) => { m.bv[t] += (-280 * m.b[t] - 15 * m.bv[t]) * dt; m.b[t] += m.bv[t] * dt; });
+    if (m.numT < 1) m.numT = Math.min(1, m.numT + dt / 0.55);
+    m.drops.forEach((d) => {
+      d.age += dt;
+      d.vy += (14 * (cy - d.y) - 4.2 * d.vy) * dt; d.y += d.vy * dt;
+      d.vx += (14 * (cx - d.x) - 5 * d.vx) * dt; d.x += d.vx * dt;
+      const grow = Math.min(1, d.age / 0.18);
+      const dist = Math.hypot(d.x - cx, d.y - cy);
+      const inside = Math.max(0, Math.min(1, (dist - R * 0.2) / (R * 0.75)));
+      d.r = 24 * (1 - Math.pow(1 - grow, 3)) * (dist < R ? inside : 1);
+      if (!d.merged && dist < R * 0.72) {
+        d.merged = true;
+        m.sv += Math.min(1.6, Math.hypot(d.vx, d.vy) / 260); // l'impact dépend de la vitesse
+        m.pending = Math.max(0, m.pending - 1);
+        m.numT = 0;
+        Cell.showCount();
+      }
+    });
+    m.drops = m.drops.filter((d) => {
+      const keep = d.age < 2 && !(d.merged && d.r < 0.5);
+      if (!keep && d.el) d.el.remove();
+      if (!keep && !d.merged) { m.pending = Math.max(0, m.pending - 1); Cell.showCount(); }
+      return keep;
+    });
+  },
+
+  apply() {
+    const m = Cell.sim, e = Cell.els;
+    if (!e) return;
+    const cy = Cell.CY, R = m.size / 2;
+    // la cellule se tend vers la goutte la plus proche, juste avant le contact
+    let lean = 0;
+    m.drops.forEach((d) => { if (!d.merged) lean = Math.max(lean, 1 - Math.max(0, (d.y - cy) - R) / 90); });
+    lean = Math.max(0, Math.min(1, lean)); lean *= lean;
+    const sx = 1 + m.s * 0.11 - lean * 0.03, sy = 1 - m.s * 0.11 + lean * 0.07;
+    e.cell.style.setProperty('--size', `${m.size.toFixed(2)}px`);
+    e.cell.style.transform = `translateY(${(lean * 6).toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+    const k = m.size / Cell.size(Math.max(0, e.total - m.pending));
+    e.text.style.transform = `translateY(-50%) scale(${(((sx + sy) / 2) * Math.min(1.02, k)).toFixed(4)})`;
+    ['snus', 'vape'].forEach((t) => {
+      const tr = `scale(${(1 - m.b[t] * 0.5).toFixed(4)}, ${(1 + m.b[t]).toFixed(4)})`;
+      if (e.gooBtns[t]) {
+        e.gooBtns[t].style.transform = tr;
+        // seul le bouton qui donne la goutte entre dans la fusion (sinon les deux boutons se colleraient)
+        e.gooBtns[t].classList.toggle('is-active', m.drops.some((d) => d.type === t && d.age < 0.9));
+      }
+      if (e.skins[t]) e.skins[t].style.transform = tr;
+      if (e.btns[t]) e.btns[t].style.transform = tr;
+    });
+    const ease = 1 - Math.pow(1 - m.numT, 3);
+    e.num.style.opacity = m.numT < 1 ? (0.15 + 0.85 * ease).toFixed(3) : '';
+    e.num.style.filter = m.numT < 1 ? `blur(${((1 - ease) * 7).toFixed(2)}px)` : '';
+    e.num.style.transform = m.numT < 1 ? `scale(${((0.9 + 0.1 * ease) * (1 + Math.sin(m.numT * Math.PI) * 0.06)).toFixed(4)})` : '';
+    m.drops.forEach((d) => {
+      if (!d.el) return;
+      const r = Math.max(0.1, d.r), st = Math.min(0.45, Math.abs(d.vy) / 1100);
+      d.el.style.width = d.el.style.height = `${(2 * r).toFixed(2)}px`;
+      d.el.style.transform = `translate(${(d.x - r).toFixed(2)}px, ${(d.y - r).toFixed(2)}px) scale(${(1 - st * 0.45).toFixed(3)}, ${(1 + st).toFixed(3)})`;
+    });
+    // le filtre de fusion ne sert que pendant une goutte (économie de batterie au repos)
+    e.layer.classList.toggle('is-gooey', m.drops.length > 0);
+  }
+};
+
+/* =========================================================================
    App — routage par #hash et rendu
    ========================================================================= */
 const App = {
@@ -4300,6 +4497,7 @@ const App = {
     }
     if (name !== App.renderedRoute) { if (App.renderedRoute) { Anim.enter(view); Anim.tabPop(name); } }
     App.renderedRoute = name;
+    Cell.sync();
     if (App.bumpCounter) {
       App.bumpCounter = false;
       const counter = view.querySelector('.big-number');
