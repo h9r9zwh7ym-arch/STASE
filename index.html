@@ -66,29 +66,29 @@
   --r-md: 18px;
   --r-lg: 24px;
   --gutter: 24px;
-  --tabbar-h: 56px;
+  --tabbar-h: 52px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Sous la barre d'onglets : la barre d'accueil d'iOS n'a pas besoin de toute la marge de sécurité. */
-  --bar-pad: max(calc(var(--safe-bottom) - 16px), 6px);
+  --bar-pad: max(calc(var(--safe-bottom) - 20px), 6px);
 }
 :root[data-theme="light"] {
-  --bg: #F3F5F9;
+  --bg: #F5F6FA;
   --surface: #FFFFFF;
-  --surface-2: #E8ECF3;
-  --line: #D6DCE7;
-  --line-2: #B9C2D3;
-  --text: #0D1525;
-  --text-2: #46526B;
-  --text-3: #5D6981;
-  --mint: #0E7F69;
+  --surface-2: #ECEFF5;
+  --line: #DDE2EA;
+  --line-2: #C3CAD7;
+  --text: #151B27;
+  --text-2: #4A5568;
+  --text-3: #646F82;
+  --mint: #17765E;
   --on-mint: #FFFFFF;
-  --mint-dim: rgba(14, 127, 105, 0.10);
-  --mint-line: rgba(14, 127, 105, 0.35);
-  --warm: #A3560F;
+  --mint-dim: rgba(23, 118, 94, 0.10);
+  --mint-line: rgba(23, 118, 94, 0.32);
+  --warm: #A2541A;
   --on-warm: #FFFFFF;
-  --warm-soft: rgba(163, 86, 15, 0.45);
-  --data: #7A879F;
+  --warm-soft: rgba(162, 84, 26, 0.42);
+  --data: #A9B3C5;
   --data-hi: #2B3550;
   --scrim: rgba(13, 21, 37, 0.36);
   --sheet: #FFFFFF;
@@ -136,7 +136,7 @@ h1, h2, h3, p { margin: 0; }
   overscroll-behavior: contain;
   touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
-  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + 2px + var(--bar-pad) + 96px);
+  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + 4px + var(--bar-pad) + 96px);
 }
 .tabbar, .fab, .scrim { touch-action: none; }
 .sheet { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
@@ -148,7 +148,7 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 2px 4px var(--bar-pad);
+  padding: 4px 4px var(--bar-pad);
   background: var(--bar);
   border-top: 1px solid var(--line);
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
@@ -163,12 +163,12 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 body.mode-obs .tabbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 body.mode-obs .tab[data-tab="corps"] { display: none; }
 body.no-chrome .tabbar, body.no-chrome .fab, body.no-fab .fab { display: none; }
-body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 28px); }
-body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 16px); }
+body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 28px); }
+body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 16px); }
 
 .fab {
   position: fixed; left: 50%; z-index: 21;
-  bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 18px);
+  bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 18px);
   transform: translateX(-50%);
   height: 52px; padding: 0 22px; border-radius: 26px;
   display: flex; align-items: center; gap: 10px; white-space: nowrap;
@@ -266,6 +266,17 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
 .group > * + * { border-top: 1px solid var(--line); }
 .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 8px 0; }
 .field__label { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.set-h { margin: 0 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.settings { gap: 26px; }
+.field--seg .segmented--sm { flex: none; padding: 3px; border-radius: 12px; background: var(--surface-2); }
+.segmented--sm :is(button, label) { min-height: 36px; padding: 0 10px; font-size: 14px; border-radius: 9px; white-space: nowrap; }
+.field--seg .field__label { white-space: nowrap; }
+.field--seg { flex-wrap: wrap; row-gap: 8px; }
+.field--seg .segmented--sm { margin-left: auto; }
+.segmented--sm :is(button, label)[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.field--link { width: 100%; border: 0; background: transparent; color: inherit; text-align: left; text-decoration: none; font: inherit; padding: 8px 0; cursor: pointer; min-height: 56px; }
+.field--link > svg { flex: none; width: 18px; height: 18px; color: var(--text-3); }
+.link--danger { color: var(--warm); }
 .field__box {
   flex: none; width: 128px; height: 48px; border-radius: 12px; padding: 0 12px;
   display: flex; align-items: center; gap: 6px;
@@ -366,7 +377,28 @@ details.benefit[open] .benefit__more { display: none; }
 
 /* Corps : anneau, étape du moment, systèmes, effets */
 .sec-h { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.range-head { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.segmented--range button { min-height: 44px; font-size: 15px; }
+.segmented--range button[aria-pressed="true"] { background: var(--mint); color: var(--on-mint); }
+.stats-sec { margin-top: 10px; margin-bottom: -10px; }
 .chips-soft { display: flex; flex-wrap: wrap; gap: 8px; }
+.procon { text-decoration: none; color: inherit; gap: 12px; }
+.procon .row svg { width: 20px; height: 20px; color: var(--text-3); }
+.procon__side { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; }
+.procon__side--minus { background: rgba(247, 198, 163, 0.12); }
+.procon__side--plus { background: var(--mint-dim); }
+.procon__k { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.procon__v { font-family: var(--font-num); font-size: 18px; font-weight: 600; }
+.procon__side--minus .procon__v { color: var(--warm); }
+.procon__side--plus .procon__v { color: var(--mint); }
+.pc-list { list-style: none; margin: 0; padding: 6px 18px; gap: 0; }
+.pc { display: flex; gap: 12px; padding: 12px 0; align-items: flex-start; }
+.pc + .pc { border-top: 1px solid var(--line); }
+.pc__sign { flex: none; width: 24px; height: 24px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; margin-top: 1px; }
+.pc__sign--minus { background: rgba(247, 198, 163, 0.16); color: var(--warm); }
+.pc__sign--plus { background: var(--mint-dim); color: var(--mint); }
+.pc__t { font-size: 15px; }
+.pc__d { font-size: 14px; line-height: 1.5; color: var(--text-2); }
 .chip--hint { position: relative; }
 .chip--hint::after { content: ''; position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 3px; background: var(--mint); }
 .chip-soft { padding: 8px 12px; border-radius: 999px; background: var(--surface); font-size: 14px; line-height: 1.3; color: var(--text-2); }
@@ -573,7 +605,7 @@ details.benefit[open] .benefit__more { display: none; }
 
 .toast {
   position: fixed; left: 50%; z-index: 50;
-  bottom: calc(var(--tabbar-h) + 2px + var(--bar-pad) + 84px);
+  bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 84px);
   transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
   width: min(calc(100% - 32px), 440px); min-height: 52px; padding: 4px 8px 4px 18px; border-radius: 16px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -618,8 +650,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* Aujourd'hui : la cellule (au repos, seule la membrane se déforme ; le reste suit la physique de Cell) */
 .cellwrap { position: relative; height: 372px; margin-top: 4px; }
 .goo-layer { position: absolute; inset: 0; pointer-events: none; }
-.goo-layer.is-gooey { filter: url(#goo); }
-.cell { position: absolute; left: 50%; top: 122px; width: var(--size); height: var(--size); margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2); transform-origin: 50% 70%; }
+.cell { position: absolute; left: 50%; top: 122px; width: 220px; height: 220px; margin: -110px 0 0 -110px; transform: scale(var(--k, 1)); transform-origin: 50% 50%; will-change: transform; }
 .cell__body { position: absolute; inset: 0; background: radial-gradient(circle at 36% 30%, #C9F5E8 0%, #A6EAD6 40%, #8EDDC6 100%);
   border-radius: 56% 44% 53% 47% / 48% 57% 43% 52%; animation: cellMorph 14s ease-in-out infinite, cellBreathe 6s ease-in-out infinite; }
 @keyframes cellMorph { 0%, 100% { border-radius: 56% 44% 53% 47% / 48% 57% 43% 52%; } 25% { border-radius: 48% 52% 46% 54% / 55% 47% 53% 45%; } 50% { border-radius: 53% 47% 57% 43% / 45% 54% 46% 55%; } 75% { border-radius: 46% 54% 50% 50% / 52% 44% 56% 48%; } }
@@ -633,7 +664,7 @@ details.benefit[open] .benefit__more { display: none; }
 .goo-btn { height: 104px; border-radius: 32px; background: linear-gradient(180deg, #B2EEDC 0%, #9FE8D2 60%, #92E0C9 100%); transform-origin: 50% 100%; }
 .cell-btns .log-btn { height: 104px; border-radius: 32px; border-color: transparent; background: transparent; color: #0F2A23; transform-origin: 50% 100%; transition: none; }
 .cell-btns .log-btn:active { background: transparent; transform: none; }
-.cell-drop { position: absolute; left: 0; top: 0; border-radius: 50%; background: #ABECD9; will-change: transform; }
+.cell-drop { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 50%; background: #B4EEDD; will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .cell__body { animation: none; } }
 
 /* Aujourd'hui : halo d'ambiance, semaine, point « en direct » */
@@ -646,7 +677,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* Grain très léger : il casse les derniers paliers de couleur du flou */
 .grain { position: absolute; inset: 0; opacity: 0.05; mix-blend-mode: overlay; -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent); mask-image: radial-gradient(closest-side, #000 30%, transparent); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
 :root { --glow-a: rgba(159, 232, 210, 0.16); --glow-b: rgba(198, 193, 245, 0.12); }
-:root[data-theme="light"] { --glow-a: rgba(14, 127, 105, 0.10); --glow-b: rgba(106, 95, 200, 0.08); }
+:root[data-theme="light"] { --glow-a: rgba(159, 232, 210, 0.45); --glow-b: rgba(198, 193, 245, 0.35); }
 @keyframes drift { from { transform: translate3d(-5%, 0, 0) scale(1); } to { transform: translate3d(5%, 24px, 0) scale(1.08); } }
 .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; margin-top: 14px; max-width: 320px; }
 .week__col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -712,8 +743,7 @@ details.benefit[open] .benefit__more { display: none; }
 </head>
 <body class="no-fab">
 <main id="view"></main>
-<!-- Fusion liquide de la cellule : flou + seuil d'opacité (utilisé seulement pendant une goutte). -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="goo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="11" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>
+
 
 <label class="fab hap-btn" role="button" tabindex="0" data-hap="go" data-value="#/envie" id="fab"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12c2.5-4 5.5-4 9 0s6.5 4 9 0"/></svg>
@@ -749,7 +779,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.11.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -957,7 +987,7 @@ const Store = {
     s.reduction = {};
     Object.keys(base.settings.reduction).forEach((k) => { s.reduction[k] = Object.prototype.hasOwnProperty.call(redSrc, k) ? redSrc[k] : base.settings.reduction[k]; });
     if (!['observation', 'arret'].includes(s.phase)) s.phase = 'observation';
-    if (!['dark', 'light'].includes(s.theme)) s.theme = 'dark';
+    if (!['dark', 'light', 'auto'].includes(s.theme)) s.theme = 'dark';
     const now = Date.now();
     s.lastExportAt = Store.tsOrNull(s.lastExportAt, now + DAY_MS);              // pas d'export « dans le futur »
     s.backupSnoozeUntil = Store.tsOrNull(s.backupSnoozeUntil, now + 8 * DAY_MS); // « Plus tard » = 7 jours au plus
@@ -1166,6 +1196,46 @@ const Calc = {
 Calc.mean = function (values) {
   const v = values.filter((x) => Number.isFinite(x));
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+};
+
+/* ---- Calc : le pour et le contre ---- */
+/**
+ * Ce que coûte la consommation et ce qu'apporte l'arrêt, avec les chiffres de la
+ * personne (prix, rythme, nicotine) et ses réponses au questionnaire.
+ */
+Calc.prosCons = function (data) {
+  const s = data.settings, p = s.profile, today = Dates.todayKey();
+  const usage = Calc.usage(s, data.intakes);
+  const yearly = Calc.yearlyCost(s, data.intakes, data.vapeMl, today);
+  const rate = Calc.dailyRate(s, data.intakes);
+  const avg = Calc.avgPerDay(data.intakes, today, 7);
+  const mlAvg = Calc.mlAverage(data.vapeMl, Dates.addDays(today, -7), Dates.addDays(today, -1));
+  const mg = (avg && s.snusMg > 0 && Calc.tracks('snus', s, data.intakes) ? avg.snus * s.snusMg : 0) + (mlAvg && s.vapeMgPerMl > 0 && Calc.tracks('vape', s, data.intakes) ? mlAvg.ml * s.vapeMgPerMl : 0);
+  const first = (t) => t.split(/(?<=\.)\s/)[0];
+  const rest = (t) => t.split(/(?<=\.)\s/).slice(1).join(' ');
+  const cons = [], pros = [];
+  if (yearly !== null) cons.push({ title: 'Ton argent', text: `Environ ${Util.formatMoney(yearly, 0)} par an, soit ${Util.formatMoney(yearly / 12, 0)} par mois.` });
+  if (rate) cons.push({ title: 'Ta dépendance', text: `Environ ${Util.formatNum(rate, 0)} prises par jour : une toutes les ${Util.formatNum(16 / Math.max(rate, 1), 1)} h de journée, à prévoir et à avoir sur toi.` });
+  if (mg) cons.push({ title: 'La nicotine', text: `Environ ${Util.formatNum(mg, 0)} mg par jour (teneur de ce que tu consommes).` });
+  const concerns = p.concerns.map((k) => CONCERN_BY_KEY[k]).filter((c) => c && (!c.only || usage === 'both' || usage === c.only));
+  concerns.forEach((c) => cons.push({ title: c.title, text: first(c.text) }));
+  if (concerns.length < 2) Calc.forUsage(NICOTINE_EFFECTS, usage).slice(0, 3 - concerns.length).forEach((e) => cons.push({ title: 'Ton corps', text: e.text }));
+  if (yearly !== null) {
+    const g = Calc.goal(s, 0);
+    const weeks = g ? Math.ceil(g.price / (yearly / 52)) : null;
+    pros.push({ title: 'Ton argent', text: `${Util.formatMoney(yearly, 0)} par an qui restent à toi.${g ? ` De quoi t’offrir ${g.name} en ${weeks < 9 ? `${weeks} semaine${weeks > 1 ? 's' : ''}` : `${Math.round(weeks / 4.3)} mois`}.` : ''}` });
+  }
+  pros.push({ title: 'Ta liberté', text: 'Plus besoin d’en avoir sur toi, de prévoir la prochaine, ni de t’éclipser.' });
+  concerns.forEach((c) => { const r = rest(c.text); if (r) pros.push({ title: c.title, text: r }); });
+  const goalText = {
+    sante: 'Ton cœur et tes vaisseaux ne sont plus sollicités plusieurs fois par jour.',
+    sport: 'Un cœur plus calme au repos, une énergie plus stable après les premières semaines.',
+    proches: 'Plus de pauses à part, et un exemple qui compte pour celles et ceux qui t’entourent.'
+  };
+  p.goals.forEach((k) => { if (goalText[k]) pros.push({ title: { sante: 'Ta santé', sport: 'Sport et énergie', proches: 'Tes proches' }[k], text: goalText[k] }); });
+  const ms = Calc.visibleMilestones(s, data.intakes);
+  [24, 72, 720].forEach((h) => { const m = ms.find((x) => x.h === h); if (m) pros.push({ title: `Après ${m.title}`, text: first(m.text) }); });
+  return { cons, pros, yearly, rate };
 };
 
 /* ---- Calc : objectif d'achat ---- */
@@ -2515,10 +2585,14 @@ const UI = {
     UI.sheetState = null;
   },
 
+  /** Thème : sombre, clair, ou « Auto » (suit le réglage de l'iPhone, y compris quand il change). */
   applyTheme() {
-    const theme = Store.data.settings.theme;
+    const pref = Store.data.settings.theme;
+    const mq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+    if (mq && !UI.themeWatch) { UI.themeWatch = true; mq.addEventListener('change', () => { if (Store.data.settings.theme === 'auto') UI.applyTheme(); }); }
+    const theme = pref === 'auto' ? (mq && mq.matches ? 'light' : 'dark') : pref;
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#F3F5F9' : '#151B27');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#F5F6FA' : '#151B27');
   }
 };
 
@@ -2569,7 +2643,7 @@ const Screens = {
         ${list.length ? list.slice().reverse().map(Screens.intakeRow).join('') : Screens.todayEmpty(isToday)}
         <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
       </section>
-      ${isToday ? Screens.whyCard() : ''}
+      ${isToday ? Screens.prosConsCard() : ''}
       ${isToday ? Screens.backupCard() : ''}
     </div>`;
   },
@@ -2584,7 +2658,7 @@ const Screens = {
     return `<section class="cellwrap no-enter" data-total="${total}" style="--n:${types.length}">
       <div class="goo-btns btn-skins" aria-hidden="true">${types.map((t) => `<div class="goo-btn" data-stype="${t}"></div>`).join('')}</div>
       <div class="goo-layer" aria-hidden="true">
-        <div class="cell" style="--size:${Cell.size(total)}px"><div class="cell__body"></div></div>
+        <div class="cell" style="--k:${(Cell.size(total) / 220).toFixed(3)}"><div class="cell__body"></div></div>
         <div class="goo-btns">${types.map((t) => `<div class="goo-btn" data-gtype="${t}"></div>`).join('')}</div>
       </div>
       <div class="cell__text"><span class="cell__num">${total}</span><span class="cell__label">${total > 1 ? 'prises' : 'prise'} aujourd’hui</span></div>
@@ -2601,7 +2675,7 @@ const Screens = {
     const last = list.length ? list[list.length - 1].ts : null;
     if (last) parts.push(`dernière il y a <span class="num" data-live="since-last">${Screens.agoShort(Date.now() - last)}</span>`);
     const usual = Calc.usualByNow(Store.data.intakes, Dates.todayKey());
-    if (usual !== null) parts.push(`d’habitude à cette heure : ${Util.formatNum(usual, 1)}`);
+    if (usual !== null && usual >= 0.5) parts.push(`d’habitude à cette heure : ${Util.formatNum(usual, 1)}`);
     return parts.length ? `<p class="small faint">${parts.join(' · ')}</p>` : '';
   },
 
@@ -2618,26 +2692,41 @@ const Screens = {
     return types.length === 1 ? btn(types[0]) : `<div class="grid-2 no-enter">${types.map(btn).join('')}</div>`;
   },
 
-  /** Aujourd'hui (observation) : un bénéfice du profil, différent chaque jour. */
-  whyCard() {
+  /** Aujourd'hui : accès à « Le pour et le contre », avec deux chiffres qui donnent envie d'ouvrir. */
+  prosConsCard() {
+    const pc = Calc.prosCons(Store.data);
+    const cost = pc.yearly !== null ? `${Util.formatMoney(pc.yearly, 0)} / an` : pc.rate ? `${Util.formatNum(pc.rate, 0)} prises / jour` : 'ta consommation';
+    return `<a class="card procon" href="#/bilan">
+      <div class="row"><span class="sec-h">Le pour et le contre</span>${Icon.next}</div>
+      <div class="grid-2" style="gap:10px">
+        <div class="procon__side procon__side--minus"><span class="procon__k">Ça te coûte</span><span class="procon__v">${Util.esc(cost)}</span></div>
+        <div class="procon__side procon__side--plus"><span class="procon__k">L’arrêt t’apporte</span><span class="procon__v">${pc.pros.length} bénéfice${pc.pros.length > 1 ? 's' : ''}</span></div>
+      </div>
+    </a>`;
+  },
+
+  /** Page « Le pour et le contre » : ce que coûte la consommation, ce qu'apporte l'arrêt, pour toi. */
+  bilan() {
+    const pc = Calc.prosCons(Store.data);
     const pr = Store.data.settings.profile;
-    if (!pr.done) {
-      return `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
-        <span class="label">Pour toi</span><span class="small muted">Quatre questions pour voir ce que l'arrêt peut t'apporter.</span></a>`;
-    }
-    const items = pr.concerns.map((k) => ({ title: CONCERN_BY_KEY[k].title, text: CONCERN_BY_KEY[k].text }))
-      .concat(pr.goals.includes('argent') ? [{ title: 'Ton argent', text: (() => { const y = Calc.yearlyCost(Store.data.settings, Store.data.intakes, Store.data.vapeMl); return y !== null ? `Au rythme actuel, environ ${Util.formatMoney(y, 0)} par an.` : ''; })() }] : [])
-      .filter((x) => x.text);
-    if (!items.length) {
-      return `<section class="card card--outline" style="gap:6px"><span class="label">Message du jour</span>
-        <span style="font-size:15px;line-height:1.5">${Util.esc(Messages.forDay(Dates.todayKey(), 'observe'))}</span></section>`;
-    }
-    const it = items[Messages.hash(Dates.todayKey()) % items.length];
-    const first = it.text.split(/(?<=\.)\s/)[0];
-    return `<a class="card card--outline" href="#/corps" style="text-decoration:none;color:inherit;gap:6px">
-      <span class="label">Pourquoi arrêter · ${Util.esc(it.title)}</span>
-      <span style="font-size:15px;line-height:1.5">${Util.esc(first)}</span>
-      <span class="small" style="color:var(--mint)">Tous tes bénéfices</span></a>`;
+    const item = (it, sign) => `<li class="pc"><span class="pc__sign pc__sign--${sign}">${sign === 'plus' ? '+' : '−'}</span>
+      <span class="stack" style="gap:2px;min-width:0"><strong class="pc__t">${Util.esc(it.title)}</strong><span class="pc__d">${Util.esc(it.text)}</span></span></li>`;
+    return `<div class="screen">
+      <header class="header"><h1 class="title">Le pour et le contre</h1>
+        <a class="icon-btn" href="#/aujourdhui" aria-label="Retour à Aujourd’hui">${Icon.close}</a></header>
+      ${pr.done ? '' : `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
+        <strong>Rends cette page personnelle</strong><span class="small muted">Quatre questions (tension, stress, sommeil…) et elle s’adapte à toi.</span></a>`}
+      <section class="stack" style="gap:10px">
+        <h2 class="sec-h" style="color:var(--warm)">Ce que la nicotine te coûte</h2>
+        <ul class="pc-list card">${pc.cons.map((x) => item(x, 'minus')).join('')}</ul>
+      </section>
+      <section class="stack" style="gap:10px">
+        <h2 class="sec-h" style="color:var(--mint)">Ce que l’arrêt t’apporte</h2>
+        <ul class="pc-list card">${pc.pros.map((x) => item(x, 'plus')).join('')}</ul>
+      </section>
+      ${Store.data.settings.phase === 'arret' ? '' : '<a class="btn btn--surface" href="#/corps">Ce qui récupère, étape par étape</a>'}
+      <p class="tiny faint">Calculé avec tes prises et tes prix. Tendances générales, pas un avis médical.</p>
+    </div>`;
   },
 
   /** Historique de toutes les prises, par jour (modifier ou supprimer après coup). */
@@ -2693,7 +2782,7 @@ const Screens = {
         <p>Une <strong>session</strong> = un « + Vape ». Si tu le souhaites, note aussi les <strong>ml</strong> vapotés dans la journée (ligne « Vape du jour ») : c'est plus précis pour les dépenses et la nicotine.</p>
         <p>Dans Réglages → Prix et dosage, indique le prix, la contenance (ml) et le taux de nicotine (mg/ml) de ta capsule ou de ton flacon.</p>`)}
       ${q('J’ai une envie', `
-        <p>Le bouton « J’ai une envie », sur l’écran Aujourd’hui, lance un minuteur de dix minutes avec une respiration guidée : quatre secondes pour inspirer, six pour expirer. Une envie monte, culmine et redescend, souvent en quelques minutes.</p>
+        <p>En mode arrêt, le bouton « J’ai une envie », sur l’écran Aujourd’hui, lance un minuteur de dix minutes avec une respiration guidée : quatre secondes pour inspirer, six pour expirer. Une envie monte, culmine et redescend, souvent en quelques minutes.</p>
         <p>Pendant le minuteur, une carte te rappelle tes raisons : ta phrase à toi (Réglages → Motivation), tes progrès et les bénéfices qui te concernent.</p>
         <p>À la fin, un mini-relevé (déclencheur, intensité) aide à repérer tes moments. Si tu as fini par prendre, ce n'est pas grave : note-le, et on repart.</p>`)}
       ${q('Après une prise en mode arrêt', `
@@ -3087,22 +3176,26 @@ const Screens = {
     const avg = Calc.avgPerDay(intakes, today, n);
     const daysKnown = Dates.diffDays(Dates.dayKey(intakes[0].ts), today);
     return `<div class="screen">
-      <header class="header">
-        <h1 class="title">Stats</h1>
-        <div class="segmented" role="group" aria-label="Période" style="width:132px">
-          <button type="button" data-action="stats-range" data-value="7" aria-pressed="${n === 7}">7 j</button>
-          <button type="button" data-action="stats-range" data-value="30" aria-pressed="${n === 30}">30 j</button>
-        </div>
-      </header>
+      <h1 class="title">Stats</h1>
       ${Screens.insightsCard()}
       ${Screens.statsReduction(intakes, today)}
+      <section class="range-head">
+        <h2 class="sec-h">Sur les ${n} derniers jours</h2>
+        <div class="segmented segmented--range" role="group" aria-label="Période des graphiques">
+          <button type="button" data-action="stats-range" data-value="7" aria-pressed="${n === 7}">7 jours</button>
+          <button type="button" data-action="stats-range" data-value="30" aria-pressed="${n === 30}">30 jours</button>
+        </div>
+      </section>
       ${Screens.statsDaily(intakes, from, today, n, avg)}
-      ${Screens.calendarCard()}
       ${Screens.statsHours(inRange)}
       ${Screens.statsTriggers(inRange)}
-      ${Screens.snusTotals(intakes.filter((x) => x.type === 'snus').length, false)}
-      ${Screens.statsSpend(intakes, today)}
       ${Screens.statsNicotine(avg)}
+      <h2 class="sec-h stats-sec">Calendrier</h2>
+      ${Screens.calendarCard()}
+      <h2 class="sec-h stats-sec">Depuis le ${Util.esc(Dates.formatDayShort(intakes[0].ts))}</h2>
+      ${Screens.snusTotals(intakes.filter((x) => x.type === 'snus').length, false)}
+      <h2 class="sec-h stats-sec">Dépenses</h2>
+      ${Screens.statsSpend(intakes, today)}
     </div>`;
   },
 
@@ -3584,37 +3677,44 @@ const Screens = {
     const s = Store.data.settings;
     const n = Store.data.intakes.length;
     const unit = s.vapeFormat === 'flacon' ? 'flacon' : 'capsule';
+    const arret = s.phase === 'arret';
     const snusOn = Calc.tracks('snus'), vapeOn = Calc.tracks('vape');
     const missing = (snusOn && !(s.snusBoxPrice > 0)) || (vapeOn && !(s.vapeUnitPrice > 0));
     const prices = [snusOn ? `snus ${s.snusBoxPrice > 0 ? Util.formatMoney(s.snusBoxPrice) : '—'}` : '', vapeOn ? `vape ${s.vapeUnitPrice > 0 ? Util.formatMoney(s.vapeUnitPrice) : '—'}` : ''].filter(Boolean).join(' · ');
-    const title = snusOn && vapeOn ? 'Snus et vape' : snusOn ? 'Snus' : 'Vape';
-    return `<div class="screen">
+    const hap = '<input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">';
+    return `<div class="screen settings">
       <h1 class="title">Réglages</h1>
 
-      ${Screens.modeSection(s)}
-
       <section class="stack">
-        <h2 class="label">Je consomme</h2>
-        ${Screens.segmented('uses', [['snus', 'Snus'], ['vape', 'Vape'], ['both', 'Les deux']], Calc.usage(s, Store.data.intakes), 'Ce que tu consommes', 'set-uses')}
+        <h2 class="set-h">Suivi</h2>
+        <div class="group">
+          <div class="field field--seg"><span class="field__label">Mode</span>
+            <div class="segmented segmented--sm" role="group" aria-label="Mode">
+              <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="observation" aria-pressed="${!arret}">${hap}Observation</label>
+              <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="arret" aria-pressed="${arret}">${hap}Arrêt</label>
+            </div></div>
+          <div class="field field--seg"><span class="field__label">Je consomme</span>
+            ${Screens.segmented('uses', [['snus', 'Snus'], ['vape', 'Vape'], ['both', 'Les deux']], Calc.usage(s, Store.data.intakes), 'Ce que tu consommes', 'set-uses').replace('class="segmented"', 'class="segmented segmented--sm"')}</div>
+          ${Screens.modeRows(s)}
+        </div>
       </section>
 
       <section class="stack">
-        <h2 class="label">Motivation</h2>
+        <h2 class="set-h">Motivation</h2>
         <div class="group">
           <label class="field field--text"><span class="field__mini">Ta raison d’arrêter</span>
             <input type="text" data-profile="why" maxlength="140" value="${Util.esc(s.profile.why)}" placeholder="En une phrase" autocomplete="off"></label>
           <label class="field field--text"><span class="field__mini">Objectif d’achat</span>
             <input type="text" data-goal="name" maxlength="40" value="${Util.esc(s.goalName)}" placeholder="Un vélo, un week-end…" autocomplete="off"></label>
           ${Screens.field('goalPrice', 'Prix de l’objectif', s.goalPrice, 'CHF', 'decimal')}
-          <div class="field"><span class="field__label">Questionnaire</span>
-            <a class="link link--mint" href="#/bienvenue" data-action="quiz-start">${s.profile.done ? 'Refaire' : 'Répondre'}</a></div>
+          <a class="field field--link" href="#/bienvenue" data-action="quiz-start"><span class="field__label"><span>Questionnaire</span><span class="tiny faint">${Screens.profileSummary(s.profile)}</span></span>${Icon.next}</a>
         </div>
       </section>
 
       <section class="stack">
-        <h2 class="label">Prix et dosage</h2>
+        <h2 class="set-h">Produits et prix</h2>
         <details class="faq fold"${missing ? ' open' : ''}>
-          <summary><span style="font-weight:700">${title}</span><span class="sec-sub"${missing ? ' style="color:var(--warm)"' : ''}>${missing ? 'Prix à renseigner' : Util.esc(prices)}</span></summary>
+          <summary><span style="font-weight:700">${snusOn && vapeOn ? 'Snus et vape' : snusOn ? 'Snus' : 'Vape'}</span><span class="sec-sub"${missing ? ' style="color:var(--warm)"' : ''}>${missing ? 'Prix à renseigner' : Util.esc(prices)}</span></summary>
           <div class="faq__body fold__body" style="gap:0">
             ${snusOn ? `${vapeOn ? '<span class="label" style="padding:4px 0 0">Snus</span>' : ''}
             ${Screens.field('snusBoxPrice', 'Prix d’une boîte', s.snusBoxPrice, 'CHF', 'decimal')}
@@ -3631,29 +3731,32 @@ const Screens = {
       </section>
 
       <section class="stack">
-        <h2 class="label">Préférences</h2>
-        ${Screens.segmented('theme', [['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème')}
+        <h2 class="set-h">Affichage et saisie</h2>
         <div class="group">
+          <div class="field field--seg"><span class="field__label">Thème</span>
+            ${Screens.segmented('theme', [['auto', 'Auto'], ['dark', 'Sombre'], ['light', 'Clair']], s.theme, 'Thème').replace('class="segmented"', 'class="segmented segmented--sm"')}</div>
           ${Screens.toggle('askContext', 'Noter le déclencheur', '', s.askContext)}
         </div>
       </section>
 
       <section class="stack">
-        <h2 class="label">Données</h2>
-        <div class="grid-2">
-          <button type="button" class="btn btn--surface" data-action="export">Exporter</button>
-          <button type="button" class="btn btn--surface" data-action="import">Importer</button>
+        <h2 class="set-h">Données</h2>
+        <div class="group">
+          <button type="button" class="field field--link" data-action="export"><span class="field__label"><span>Exporter une sauvegarde</span><span class="tiny faint">${Screens.backupHint(s.lastExportAt, n)}</span></span>${Icon.next}</button>
+          <button type="button" class="field field--link" data-action="import"><span class="field__label">Importer une sauvegarde</span>${Icon.next}</button>
+          <a class="field field--link" href="#/historique"><span class="field__label">Historique des prises</span>${Icon.next}</a>
         </div>
-        <a class="btn btn--surface" href="#/historique">Historique des prises</a>
-        <p class="tiny faint" style="text-align:center">${Screens.backupHint(s.lastExportAt, n)}</p>
       </section>
 
-      <div class="stack" style="align-items:center;gap:4px">
-        <a class="link link--mint" href="#/aide">Aide</a>
-        <button type="button" class="link" data-action="update-check">Rechercher une mise à jour</button>
-        <button type="button" class="link" data-action="wipe-ask">Effacer toutes les données</button>
-        <p class="tiny faint">STASE ${APP_VERSION}</p>
-      </div>
+      <section class="stack">
+        <h2 class="set-h">Aide</h2>
+        <div class="group">
+          <a class="field field--link" href="#/aide"><span class="field__label">Comment fonctionne STASE</span>${Icon.next}</a>
+          <button type="button" class="field field--link" data-action="update-check"><span class="field__label"><span>Rechercher une mise à jour</span><span class="tiny faint">Version ${APP_VERSION}</span></span>${Icon.next}</button>
+        </div>
+      </section>
+
+      <button type="button" class="link link--danger" data-action="wipe-ask" style="align-self:center">Effacer toutes les données</button>
     </div>`;
   },
 
@@ -3667,28 +3770,20 @@ const Screens = {
   },
 
   /** Réglages > Mode : observation / arrêt, référence, réduction progressive. */
-  modeSection(s) {
-    const arret = s.phase === 'arret';
+  /** Lignes propres au mode : début et référence (arrêt), réduction progressive (observation). */
+  modeRows(s) {
     const b = s.baseline;
     const red = s.reduction;
     const target = Calc.reductionTarget(red, Dates.todayKey());
-    return `<section class="stack">
-      <h2 class="label">Mode</h2>
-      <div class="segmented" role="group" aria-label="Mode">
-        <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="observation" aria-pressed="${!arret}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Observation</label>
-        <label class="hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="arret" aria-pressed="${arret}"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Arrêt</label>
-      </div>
-      ${arret ? `<div class="group">
-        <div class="field"><span class="field__label">Début de l'arrêt</span><span class="muted small">${Util.esc(Dates.formatDayShort(s.quitStart))}, ${Dates.formatTime(s.quitStart)}</span></div>
-        <div class="field"><span class="field__label"><span>Référence</span><span class="tiny faint">${b ? `${Util.formatNum(b.snusPerDay, 1)} snus · ${Util.formatNum(b.vapePerDay, 1)} vape${b.vapeMlPerDay !== null ? ` (${Util.formatNum(b.vapeMlPerDay, 1)} ml)` : ''} par jour${b.days ? ` · ${b.days} j d'observation` : ''}` : 'non renseignée'}</span></span>
-          <button type="button" class="link link--mint" data-action="baseline-edit">Modifier</button></div>
-      </div>` : `<div class="group">
-        ${Screens.toggleRow('reduction-toggle', 'Réduction progressive', '', red.on)}
-        ${red.on ? `<div class="field"><span class="field__label"><span>Baisse par semaine</span><span class="tiny faint">Cible du jour : ${target}</span></span>
-          <div class="segmented" style="width:168px" role="group" aria-label="Baisse par semaine">${[[0.5, '0,5'], [1, '1'], [2, '2']].map(([v, l]) =>
-            `<button type="button" data-action="reduction-step" data-value="${v}" aria-pressed="${red.weeklyStep === v}">${l}</button>`).join('')}</div></div>` : ''}
-      </div>`}
-    </section>`;
+    if (s.phase === 'arret') {
+      return `<div class="field"><span class="field__label">Début de l'arrêt</span><span class="muted small">${Util.esc(Dates.formatDayShort(s.quitStart))}, ${Dates.formatTime(s.quitStart)}</span></div>
+        <div class="field"><span class="field__label"><span>Référence</span><span class="tiny faint">${b ? `${Util.formatNum(b.snusPerDay, 1)} snus · ${Util.formatNum(b.vapePerDay, 1)} vape${b.vapeMlPerDay !== null ? ` (${Util.formatNum(b.vapeMlPerDay, 1)} ml)` : ''} par jour` : 'non renseignée'}</span></span>
+          <button type="button" class="link link--mint" data-action="baseline-edit">Modifier</button></div>`;
+    }
+    return `${Screens.toggleRow('reduction-toggle', 'Réduction progressive', red.on ? `Cible du jour : ${target}` : '', red.on)}
+      ${red.on ? `<div class="field field--seg"><span class="field__label">Baisse par semaine</span>
+        <div class="segmented segmented--sm" role="group" aria-label="Baisse par semaine">${[[0.5, '0,5'], [1, '1'], [2, '2']].map(([v, l]) =>
+          `<button type="button" data-action="reduction-step" data-value="${v}" aria-pressed="${red.weeklyStep === v}">${l}</button>`).join('')}</div></div>` : ''}`;
   },
 
   /** Ligne avec interrupteur relié à une action. */
@@ -4380,8 +4475,8 @@ const Cell = {
     if (!wrap || !btn || Anim.reduced()) return;
     const w = wrap.getBoundingClientRect(), r = btn.getBoundingClientRect();
     const m = Cell.sim;
-    m.bv[type] = (m.bv[type] || 0) - 2.4; // l'appui écrase le bouton, qui rebondit tout seul
-    m.drops.push({ type, x: r.left + r.width / 2 - w.left, y: r.top - w.top + 38, vx: 0, vy: -60, r: 0, age: 0, merged: false, el: null });
+    m.bv[type] = (m.bv[type] || 0) - 3; // l'appui écrase le bouton, qui rebondit tout seul
+    m.drops.push({ type, x: r.left + r.width / 2 - w.left, y: r.top - w.top + 22, vx: 0, vy: -260, r: 0, age: 0, merged: false, el: null });
     m.pending++;
   },
 
@@ -4435,10 +4530,11 @@ const Cell = {
     if (Cell.raf) return;
     Cell.last = performance.now();
     const loop = (now) => {
-      const dt = Math.min(0.033, (now - Cell.last) / 1000);
+      // temps réel (même si l'iPhone saute des images) : l'animation ne ralentit jamais
+      const dt = Math.min(0.06, (now - Cell.last) / 1000);
       Cell.last = now;
       if (!Cell.els || !Cell.els.wrap.isConnected) { Cell.raf = null; return; }
-      Cell.step(dt / 2); Cell.step(dt / 2);
+      for (let i = 0; i < 4; i++) Cell.step(dt / 4);
       Cell.apply();
       if (Cell.busy()) Cell.raf = requestAnimationFrame(loop);
       else Cell.raf = null;
@@ -4450,28 +4546,29 @@ const Cell = {
     const m = Cell.sim, e = Cell.els;
     const cx = e.wrap.clientWidth / 2, cy = Cell.CY, R = m.size / 2;
     const target = Cell.size(e.total - m.pending);
-    m.sizeV += (90 * (target - m.size) - 11 * m.sizeV) * dt; m.size += m.sizeV * dt;
-    m.sv += (-150 * m.s - 5.5 * m.sv) * dt; m.s += m.sv * dt;
-    ['snus', 'vape'].forEach((t) => { m.bv[t] += (-280 * m.b[t] - 15 * m.bv[t]) * dt; m.b[t] += m.bv[t] * dt; });
-    if (m.numT < 1) m.numT = Math.min(1, m.numT + dt / 0.55);
+    // ressorts vifs : la goutte arrive en ~0,35 s, la cellule ondule et s'apaise en ~0,8 s
+    m.sizeV += (170 * (target - m.size) - 22 * m.sizeV) * dt; m.size += m.sizeV * dt;
+    m.sv += (-260 * m.s - 10 * m.sv) * dt; m.s += m.sv * dt;
+    ['snus', 'vape'].forEach((t) => { m.bv[t] += (-420 * m.b[t] - 22 * m.bv[t]) * dt; m.b[t] += m.bv[t] * dt; });
+    if (m.numT < 1) m.numT = Math.min(1, m.numT + dt / 0.3);
     m.drops.forEach((d) => {
       d.age += dt;
-      d.vy += (14 * (cy - d.y) - 4.2 * d.vy) * dt; d.y += d.vy * dt;
-      d.vx += (14 * (cx - d.x) - 5 * d.vx) * dt; d.x += d.vx * dt;
-      const grow = Math.min(1, d.age / 0.18);
+      d.vy += (75 * (cy - d.y) - 13 * d.vy) * dt; d.y += d.vy * dt;
+      d.vx += (75 * (cx - d.x) - 15 * d.vx) * dt; d.x += d.vx * dt;
+      const grow = Math.min(1, d.age / 0.1);
       const dist = Math.hypot(d.x - cx, d.y - cy);
-      const inside = Math.max(0, Math.min(1, (dist - R * 0.2) / (R * 0.75)));
-      d.r = 24 * (1 - Math.pow(1 - grow, 3)) * (dist < R ? inside : 1);
-      if (!d.merged && dist < R * 0.72) {
+      const inside = Math.max(0, Math.min(1, (dist - R * 0.25) / (R * 0.7)));
+      d.r = 22 * (1 - Math.pow(1 - grow, 3)) * (dist < R ? inside : 1);
+      if (!d.merged && dist < R * 0.75) {
         d.merged = true;
-        m.sv += Math.min(1.6, Math.hypot(d.vx, d.vy) / 260); // l'impact dépend de la vitesse
+        m.sv += Math.min(1.3, Math.hypot(d.vx, d.vy) / 420); // l'impact dépend de la vitesse
         m.pending = Math.max(0, m.pending - 1);
         m.numT = 0;
         Cell.showCount();
       }
     });
     m.drops = m.drops.filter((d) => {
-      const keep = d.age < 2 && !(d.merged && d.r < 0.5);
+      const keep = d.age < 1.2 && !(d.merged && d.r < 0.5);
       if (!keep && d.el) d.el.remove();
       if (!keep && !d.merged) { m.pending = Math.max(0, m.pending - 1); Cell.showCount(); }
       return keep;
@@ -4487,10 +4584,9 @@ const Cell = {
     m.drops.forEach((d) => { if (!d.merged) lean = Math.max(lean, 1 - Math.max(0, (d.y - cy) - R) / 90); });
     lean = Math.max(0, Math.min(1, lean)); lean *= lean;
     const sx = 1 + m.s * 0.11 - lean * 0.03, sy = 1 - m.s * 0.11 + lean * 0.07;
-    e.cell.style.setProperty('--size', `${m.size.toFixed(2)}px`);
-    e.cell.style.transform = `translateY(${(lean * 6).toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
-    const k = m.size / Cell.size(Math.max(0, e.total - m.pending));
-    e.text.style.transform = `translateY(-50%) scale(${(((sx + sy) / 2) * Math.min(1.02, k)).toFixed(4)})`;
+    const k = m.size / 220;
+    e.cell.style.transform = `translateY(${(lean * 6).toFixed(2)}px) scale(${(k * sx).toFixed(4)}, ${(k * sy).toFixed(4)})`;
+    e.text.style.transform = `translateY(-50%) scale(${((sx + sy) / 2).toFixed(4)})`;
     ['snus', 'vape'].forEach((t) => {
       const tr = `scale(${(1 - m.b[t] * 0.5).toFixed(4)}, ${(1 + m.b[t]).toFixed(4)})`;
       if (e.gooBtns[t]) {
@@ -4502,17 +4598,14 @@ const Cell = {
       if (e.btns[t]) e.btns[t].style.transform = tr;
     });
     const ease = 1 - Math.pow(1 - m.numT, 3);
-    e.num.style.opacity = m.numT < 1 ? (0.15 + 0.85 * ease).toFixed(3) : '';
-    e.num.style.filter = m.numT < 1 ? `blur(${((1 - ease) * 7).toFixed(2)}px)` : '';
-    e.num.style.transform = m.numT < 1 ? `scale(${((0.9 + 0.1 * ease) * (1 + Math.sin(m.numT * Math.PI) * 0.06)).toFixed(4)})` : '';
+    e.num.style.opacity = m.numT < 1 ? (0.2 + 0.8 * ease).toFixed(3) : '';
+    e.num.style.transform = m.numT < 1 ? `translateY(${((1 - ease) * 10).toFixed(2)}px) scale(${(1 + Math.sin(m.numT * Math.PI) * 0.08).toFixed(4)})` : '';
     m.drops.forEach((d) => {
       if (!d.el) return;
-      const r = Math.max(0.1, d.r), st = Math.min(0.45, Math.abs(d.vy) / 1100);
-      d.el.style.width = d.el.style.height = `${(2 * r).toFixed(2)}px`;
-      d.el.style.transform = `translate(${(d.x - r).toFixed(2)}px, ${(d.y - r).toFixed(2)}px) scale(${(1 - st * 0.45).toFixed(3)}, ${(1 + st).toFixed(3)})`;
+      // taille et étirement par transform seulement (pas de recalcul de mise en page)
+      const r = Math.max(0.1, d.r), st = Math.min(0.5, Math.abs(d.vy) / 1600), q = r / 24;
+      d.el.style.transform = `translate(${(d.x - 24).toFixed(2)}px, ${(d.y - 24).toFixed(2)}px) scale(${(q * (1 - st * 0.4)).toFixed(3)}, ${(q * (1 + st)).toFixed(3)})`;
     });
-    // le filtre de fusion ne sert que pendant une goutte (économie de batterie au repos)
-    e.layer.classList.toggle('is-gooey', m.drops.length > 0);
   }
 };
 
@@ -4520,7 +4613,7 @@ const Cell = {
    App — routage par #hash et rendu
    ========================================================================= */
 const App = {
-  routes: ['aujourdhui', 'stats', 'corps', 'reglages', 'envie', 'reprendre', 'bienvenue', 'historique', 'aide'],
+  routes: ['aujourdhui', 'stats', 'corps', 'reglages', 'envie', 'reprendre', 'bienvenue', 'historique', 'aide', 'bilan'],
   /** Historique : nombre de jours affichés, écran de retour. */
   historyDays: 30,
   historyBack: null,
@@ -4664,7 +4757,7 @@ const App = {
     // En observation, l'onglet Corps est masqué : la page reste accessible depuis « Tous tes bénéfices ».
     document.body.classList.toggle('mode-obs', Store.data.settings.phase !== 'arret');
     // Le bouton « J'ai une envie » ne vit que sur l'accueil.
-    document.body.classList.toggle('no-fab', name !== 'aujourdhui');
+    document.body.classList.toggle('no-fab', name !== 'aujourdhui' || Store.data.settings.phase !== 'arret');
     document.querySelectorAll('.tab').forEach((t) => {
       if (t.dataset.tab === name) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
     });
