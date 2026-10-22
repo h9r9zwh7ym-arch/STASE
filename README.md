@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.8**
+**Version 2.9**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 
@@ -23,7 +23,8 @@ Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d
 - **Objectif d'achat** (Réglages) : un nom et un prix en CHF ; en arrêt, l'argent économisé le remplit sur l'écran Aujourd'hui (« Vélo · 38 % »).
 - **J'ai une envie** : minuteur de 10 minutes, respiration guidée, rappel de tes raisons d'arrêter (ta phrase, tes progrès, tes bénéfices), mini-relevé.
 - **Après une prise** : rien n'est remis à zéro, on note et on reprend.
-- **Corps** : en observation, ce que fait la nicotine (avec tes chiffres) et ce qui récupère après l'arrêt ; en arrêt, anneau vers le prochain repère, « En ce moment » (ce qui est normal, ce qui aide), récupération par système (cœur, cerveau, sommeil, humeur, envies, bouche ou gorge), bénéfices personnalisés et frise de 12 repères détaillés. La récupération par système et la frise sont repliées par défaut ; les bénéfices « Pour toi » forment une liste à déplier. Tendances générales, pas un avis médical.
+- **Corps** (concis) : anneau vers le prochain repère, « En ce moment » en étiquettes, récupération par système en une ligne (détail au toucher), frise horizontale des repères (liste complète à un toucher), bénéfices « Pour toi ». Tendances générales, pas un avis médical.
+- **Couleurs** : palette sombre adoucie (menthe, pêche, lavande pour le snus, ciel pour la vape) ; halo d'ambiance en formes floutées + grain, sans bandes de dégradé.
 - **Ouverture** toujours sur Aujourd'hui (sauf juste après « Recharger » ou pendant une envie en cours), avec la semaine en un coup d'œil (barres en observation, pastilles en arrêt).
 - **Réglages** regroupés : Mode, Motivation (raison, objectif d'achat), Prix et dosage (replié), Préférences, Données.
 - **Aide** intégrée (Réglages → Aide) : fonctionnement, calculs, sauvegarde, ressources (Ligne stop-tabac 0848 000 181).

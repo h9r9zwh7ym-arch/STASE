@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="STASE">
 <meta name="application-name" content="STASE">
-<meta name="theme-color" content="#0B1220">
+<meta name="theme-color" content="#151B27">
 <meta name="color-scheme" content="dark light">
 <!-- Sécurité : aucune ressource externe, aucun envoi de données ; seul le script de la page s'exécute. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -35,26 +35,28 @@
    1. Jetons de design (maquettes STASE) — sombre par défaut, clair en option
    ========================================================================= */
 :root {
-  --bg: #0B1220;
-  --surface: #131C2F;
-  --surface-2: #1B263D;
-  --line: #26324B;
-  --line-2: #3A4766;
-  --text: #EAF0F8;
-  --text-2: #A7B3C8;
-  --text-3: #8693AD;
-  --mint: #5EE6C4;
-  --on-mint: #062A22;
-  --mint-dim: rgba(94, 230, 196, 0.12);
-  --mint-line: rgba(94, 230, 196, 0.35);
-  --warm: #F2B36B;
-  --on-warm: #2A1704;
-  --warm-soft: rgba(242, 179, 107, 0.55);
-  --data: #5B6F99;
-  --data-hi: #C9D3E3;
-  --scrim: rgba(4, 8, 16, 0.62);
-  --sheet: #151F34;
-  --bar: rgba(13, 20, 35, 0.94);
+  --bg: #151B27;
+  --surface: #1E2533;
+  --surface-2: #272F3F;
+  --line: #2D3648;
+  --line-2: #414C63;
+  --text: #F1F3F8;
+  --text-2: #B7C0D0;
+  --text-3: #8B95A8;
+  --mint: #9FE8D2;
+  --on-mint: #0F2A23;
+  --mint-dim: rgba(159, 232, 210, 0.14);
+  --mint-line: rgba(159, 232, 210, 0.38);
+  --warm: #F7C6A3;
+  --on-warm: #3A2210;
+  --warm-soft: rgba(247, 198, 163, 0.55);
+  --snus: #C6C1F5;
+  --vape: #A8D2F5;
+  --data: #4D5A75;
+  --data-hi: #D3DAE6;
+  --scrim: rgba(8, 11, 18, 0.6);
+  --sheet: #1C2331;
+  --bar: rgba(21, 27, 39, 0.92);
   --shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 
   --font-num: 'Space Grotesk', ui-rounded, -apple-system, system-ui, sans-serif;
@@ -91,6 +93,8 @@
   --scrim: rgba(13, 21, 37, 0.36);
   --sheet: #FFFFFF;
   --bar: rgba(255, 255, 255, 0.94);
+  --snus: #6A5FC8;
+  --vape: #2F7DBF;
   --shadow: 0 10px 24px rgba(13, 21, 37, 0.12);
 }
 
@@ -287,7 +291,7 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
 /* Aujourd'hui : navigation jour, compteur, boutons de relevé, lignes */
 .day-nav { display: flex; align-items: center; gap: 4px; }
 .day-nav .icon-btn { flex: none; width: 44px; }
-.day-nav .label { flex: 1; text-align: center; }
+.day-nav .label { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.05em; }
 .icon-btn--ghost { background: transparent; color: var(--text-3); }
 .icon-btn:disabled { opacity: 0.3; }
 .counter { display: flex; align-items: baseline; gap: 14px; }
@@ -310,8 +314,8 @@ body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 2px + var(--
 .entry__ctx { flex: 1; font-size: 14px; color: var(--text-2); }
 .entry__ctx.faint { color: var(--text-3); }
 .marker { width: 8px; height: 8px; background: var(--text-2); }
-.marker--snus { border-radius: 2px; }
-.marker--vape { border-radius: 4px; }
+.marker--snus { border-radius: 2px; background: var(--snus); }
+.marker--vape { border-radius: 4px; background: var(--vape); }
 .dots { display: flex; gap: 4px; }
 .dots span { width: 6px; height: 6px; border-radius: 3px; background: var(--line); }
 .dots span.on { background: var(--warm); }
@@ -359,6 +363,38 @@ details.benefit[open] .benefit__more { display: none; }
 .tl__tag--me { color: var(--mint) !important; }
 
 /* Corps : anneau, étape du moment, systèmes, effets */
+.sec-h { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+.chips-soft { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-soft { padding: 8px 12px; border-radius: 999px; background: var(--surface); font-size: 14px; line-height: 1.3; color: var(--text-2); }
+.chip-soft--help { background: var(--mint-dim); color: var(--mint); }
+.sysrow summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 84px auto; gap: 12px; align-items: center; min-height: 40px; font-size: 14px; }
+.sysrow summary::-webkit-details-marker { display: none; }
+.sysrow summary.sysrow--plan { grid-template-columns: minmax(0, 1fr) auto; }
+.sysrow__title { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sysrow__bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.sysrow__bar > span { display: block; height: 100%; border-radius: 3px; background: var(--vape); }
+.sysrow__val { min-width: 36px; white-space: nowrap; text-align: right; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.sysrow__val.is-done { color: var(--mint); font-weight: 700; }
+.sysrow[open] .sysrow__title { color: var(--mint); }
+.sysrow__text { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.is-entering .sysrow__bar > span { transform-origin: 0 50%; animation: growX 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
+.mstrip { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+.mstrip::before, .mstrip::after { content: ''; position: absolute; top: 10px; height: 2px; left: calc(50% / var(--n)); right: calc(50% / var(--n)); background: var(--line); }
+.mstrip::after { right: auto; width: calc((100% - 100% / var(--n)) * var(--fill)); background: var(--mint); }
+.mstrip__node { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mstrip__node > span:first-child { width: 22px; height: 22px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--line-2); background: var(--bg); }
+.mstrip--done > span:first-child { background: var(--mint); border-color: var(--mint); }
+.mstrip--next > span:first-child { border: 3px solid var(--mint); box-shadow: 0 0 0 6px var(--mint-dim); }
+.mstrip__t { font-size: 12px; color: var(--text-3); text-align: center; }
+.mstrip--done .mstrip__t { color: var(--text-2); }
+.mstrip--next .mstrip__t { color: var(--mint); font-weight: 700; }
+.mstrip__all > summary { list-style: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--mint); min-height: 40px; display: inline-flex; align-items: center; }
+.mstrip__all > summary::-webkit-details-marker { display: none; }
+.mstrip__all > summary::after { content: ' ›'; }
+.mstrip__all[open] > summary::after { content: ' ‹'; }
+.mstrip__all .timeline { margin-top: 12px; }
+.hero__blob { position: absolute; inset: -8px; z-index: -1; background: var(--mint-dim); border-radius: 56% 44% 53% 47% / 48% 57% 43% 52%; animation: cellMorph 14s ease-in-out infinite; }
+.hero__ring { isolation: isolate; }
 .corps { gap: 28px; }
 .sec-title { font-family: var(--font-num); font-size: 20px; font-weight: 600; line-height: 1.2; color: var(--text); }
 .sec-sub { font-size: 14px; color: var(--text-3); }
@@ -597,13 +633,16 @@ details.benefit[open] .benefit__more { display: none; }
 @media (prefers-reduced-motion: reduce) { .cell__body { animation: none; } }
 
 /* Aujourd'hui : halo d'ambiance, semaine, point « en direct » */
-.ambient { position: absolute; left: 0; right: 0; top: -160px; height: 460px; overflow: hidden; pointer-events: none; }
-.ambient::before { content: ''; position: absolute; inset: 0 -15%;
-  background: radial-gradient(closest-side at 35% 50%, var(--glow-a), transparent), radial-gradient(closest-side at 70% 40%, var(--glow-b), transparent);
-  animation: drift 16s ease-in-out infinite alternate; will-change: transform; }
-.ambient--quit { --glow-b: var(--glow-a); }
-:root { --glow-a: rgba(94, 230, 196, 0.10); --glow-b: rgba(242, 179, 107, 0.08); }
-:root[data-theme="light"] { --glow-a: rgba(14, 127, 105, 0.08); --glow-b: rgba(163, 86, 15, 0.06); }
+.ambient { position: absolute; left: calc(-1 * var(--gutter)); right: calc(-1 * var(--gutter)); top: -150px; height: 470px; pointer-events: none; overflow-x: clip; }
+/* Formes pleines floutées (pas de dégradé radial : il dessinait des bandes sur iPhone), qui dérivent lentement */
+.ambient::before, .ambient::after { content: ''; position: absolute; border-radius: 50%; filter: blur(56px); will-change: transform; }
+.ambient::before { left: -12%; top: 90px; width: 70%; height: 260px; background: var(--glow-a); animation: drift 18s ease-in-out infinite alternate; }
+.ambient::after { right: -14%; top: 40px; width: 60%; height: 240px; background: var(--glow-b); animation: drift 23s ease-in-out infinite alternate-reverse; }
+.ambient--quit::after { background: var(--glow-a); }
+/* Grain très léger : il casse les derniers paliers de couleur du flou */
+.grain { position: absolute; inset: 0; opacity: 0.05; mix-blend-mode: overlay; -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent); mask-image: radial-gradient(closest-side, #000 30%, transparent); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+:root { --glow-a: rgba(159, 232, 210, 0.16); --glow-b: rgba(198, 193, 245, 0.12); }
+:root[data-theme="light"] { --glow-a: rgba(14, 127, 105, 0.10); --glow-b: rgba(106, 95, 200, 0.08); }
 @keyframes drift { from { transform: translate3d(-5%, 0, 0) scale(1); } to { transform: translate3d(5%, 24px, 0) scale(1.08); } }
 .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; margin-top: 14px; max-width: 320px; }
 .week__col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -648,7 +687,7 @@ details.benefit[open] .benefit__more { display: none; }
 @keyframes entryIn { 0% { opacity: 0; transform: translateX(-10px); background: var(--mint-dim); } 30% { opacity: 1; transform: none; background: var(--mint-dim); } 100% { background: transparent; } }
 .tab--pop svg { animation: tabPop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1); }
 @keyframes tabPop { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-4px) scale(1.12); } 100% { transform: none; } }
-.fab::after { content: ''; position: absolute; inset: -7px; border-radius: 33px; border: 7px solid rgba(242, 179, 107, 0.12); opacity: 0; pointer-events: none; animation: fabGlow 5s ease-in-out infinite; }
+.fab::after { content: ''; position: absolute; inset: -7px; border-radius: 33px; border: 7px solid rgba(247, 198, 163, 0.12); opacity: 0; pointer-events: none; animation: fabGlow 5s ease-in-out infinite; }
 @keyframes fabGlow { 50% { opacity: 1; } }
 .done-mark { position: relative; }
 .milestone-new { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -706,7 +745,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.9.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2411,7 +2450,7 @@ const UI = {
   applyTheme() {
     const theme = Store.data.settings.theme;
     document.documentElement.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#F3F5F9' : '#0B1220');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#F3F5F9' : '#151B27');
   }
 };
 
@@ -2432,7 +2471,7 @@ const Screens = {
     const c = Calc.countByType(list);
     const avg = Calc.avgPerDay(Store.data.intakes, today);
     return `<div class="screen screen--today">
-      <div class="ambient" aria-hidden="true"></div>
+      <div class="ambient" aria-hidden="true"><div class="grain"></div></div>
       <header class="header"><span class="wordmark">STASE</span><span class="pill">Observation</span></header>
 
       <section class="stack" style="gap:6px">
@@ -2643,7 +2682,7 @@ const Screens = {
     const money = av.money === null ? '—' : Util.formatMoney(av.money);
     const units = av.vape.units !== null && av.vape.avoided > 0 ? ` · ≈ ${Util.formatNum(av.vape.units, 1)} ${st.vapeFormat === 'flacon' ? 'flacon' : 'capsule'}${av.vape.units >= 2 ? 's' : ''}` : '';
     return `<div class="screen screen--today">
-      <div class="ambient ambient--quit" aria-hidden="true"></div>
+      <div class="ambient ambient--quit" aria-hidden="true"><div class="grain"></div></div>
       <header class="header"><span class="wordmark">STASE</span><span class="pill pill--mint">Arrêt · jour ${dayN}</span></header>
 
       ${fresh ? `<section class="card card--featured milestone-new" style="gap:8px">
@@ -2875,11 +2914,16 @@ const Screens = {
     const st = Store.data.settings, today = Dates.todayKey();
     const fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'narrow' });
     const quitKey = quit && st.quitStart ? Dates.dayKey(st.quitStart) : null;
+    // un seul passage sur les prises de la fenêtre (rapide même avec un long historique)
+    const startKey = Dates.addDays(endKey, -6);
+    const from = Dates.keyToStart(startKey), to = Dates.keyToStart(Dates.addDays(endKey, 1));
+    const per = {};
+    Store.data.intakes.forEach((x) => {
+      if (x.ts < from || x.ts >= to || (quit && x.ts < st.quitStart)) return;
+      const k = Dates.dayKey(x.ts); per[k] = (per[k] || 0) + 1;
+    });
     const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const k = Dates.addDays(endKey, -i);
-      days.push({ k, n: Calc.onDay(Store.data.intakes, k).filter((x) => !quit || x.ts >= st.quitStart).length });
-    }
+    for (let i = 6; i >= 0; i--) { const k = Dates.addDays(endKey, -i); days.push({ k, n: per[k] || 0 }); }
     const max = Math.max(1, ...days.map((d) => d.n));
     const cols = days.map((d, j) => {
       const cls = d.k === today ? ' is-today' : d.k === endKey ? ' is-sel' : '';
@@ -3323,15 +3367,15 @@ const Screens = {
     const stage = Calc.stageInfo(streak.current);
     const done = states.filter((m) => m.state === 'done').length;
     return `<div class="screen corps">
-      <h1 class="title">Corps</h1>
+      <header class="row" style="align-items:baseline"><h1 class="title">Corps</h1>
+        <span class="small faint">sans nicotine · ${Screens.durationShort(streak.current)}</span></header>
       ${Screens.corpsHero(next, streak.current)}
-      <section class="card" style="gap:14px">
-        <div class="stack" style="gap:2px"><h2 class="sec-sub">En ce moment</h2><span class="now__stage">${Util.esc(stage.title)}</span></div>
-        <div class="now__group"><span class="now__head">C’est normal</span>${stage.normal.map((t) => `<span class="stage__item">${Util.esc(t)}</span>`).join('')}</div>
-        <div class="now__group"><span class="now__head">Ce qui aide</span>${stage.helps.map((t) => `<span class="stage__item stage__item--help">${Util.esc(t)}</span>`).join('')}</div>
+      <section class="stack" style="gap:10px">
+        <div class="row" style="justify-content:flex-start;gap:10px;align-items:baseline"><h2 class="sec-h">En ce moment</h2><span class="small" style="color:var(--warm);font-weight:700">${Util.esc(stage.title)}</span></div>
+        <div class="chips-soft">${stage.normal.slice(0, 2).map((t) => `<span class="chip-soft">${Util.esc(t)}</span>`).join('')}${stage.helps.slice(0, 2).map((t) => `<span class="chip-soft chip-soft--help">${Util.esc(t)}</span>`).join('')}</div>
       </section>
-      ${Screens.systemsCard(streak.current, true)}
-      ${Screens.fold('Repères', Screens.timeline(states), `${done} sur ${states.length} atteint${done > 1 ? 's' : ''}`)}
+      ${Screens.systemsCompact(streak.current, true)}
+      ${Screens.milestoneStrip(states, done)}
       ${Screens.forYou('Pour toi')}
       ${hadIntake ? '<p class="tiny faint">Les repères comptent depuis ta dernière prise.</p>' : ''}
       ${Screens.corpsNote()}
@@ -3349,45 +3393,56 @@ const Screens = {
         <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="hero__track"/>
           <circle cx="50" cy="50" r="42" class="hero__arc" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/></svg>
         <span class="hero__center">${center}</span>
+        <span class="hero__blob" aria-hidden="true"></span>
       </div>
       <div class="stack" style="gap:6px;min-width:0">
         ${next ? `<span class="label" style="color:var(--mint)">Prochain repère</span>
           <span class="value" style="font-size:24px">${Util.esc(next.title)}</span>
           <span class="small muted">dans ${Screens.durationShort(next.remainingMs)}</span>
-          <p class="body-text" style="color:var(--text)">${Util.esc(next.text)}</p>`
+          <p class="small" style="line-height:1.5;color:var(--text-2)">${Util.esc(next.text.split(/(?<=\.)\s/)[0])}</p>`
         : `<span class="label" style="color:var(--mint)">Tous les repères sont passés</span>
           <p class="body-text" style="color:var(--text)">Il n'y a plus d'étape à attendre : la suite, c'est ta vie sans nicotine.</p>`}
       </div>
     </section>`;
   },
 
-  /** « Ton corps récupère » : un système par ligne, avec sa progression (ou ce qui t'attend). */
-  systemsCard(currentMs, started) {
-    const list = Calc.forUsage(SYSTEMS, Calc.usage(Store.data.settings, Store.data.intakes));
-    const done = started ? list.filter((sys) => Calc.systemProgress(currentMs, sys) >= 1).length : 0;
-    const sub = started ? `${list.length} systèmes · ${done} presque rétabli${done > 1 ? 's' : ''}` : `${list.length} systèmes, du cœur au sommeil`;
-    return Screens.fold(started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt', Screens.systemsBody(currentMs, started), sub);
-  },
-
-  /** Bloc repliable de Corps (fermé par défaut : la page reste courte). */
-  fold(title, body, sub = '') {
-    return `<details class="faq fold"><summary><span class="sec-title">${title}</span>${sub ? `<span class="sec-sub">${sub}</span>` : ''}</summary><div class="faq__body fold__body">${body}</div></details>`;
-  },
-
-  systemsBody(currentMs, started) {
+  /** Récupération par système, une ligne chacun (barre + pourcentage) ; le détail s'ouvre au toucher. */
+  systemsCompact(currentMs, started) {
     const usage = Calc.usage(Store.data.settings, Store.data.intakes);
     const rows = Calc.forUsage(SYSTEMS, usage).map((sys) => {
       const p = started ? Calc.systemProgress(currentMs, sys) : 0;
-      const when = sys.h < 48 ? `${sys.h} h` : sys.h < 24 * 60 ? `${Math.round(sys.h / 24)} jours` : `${Math.round(sys.h / 24 / 30)} mois`;
-      const status = !started ? `en général sous ${when}` : p >= 1 ? 'l’essentiel est fait' : `${Math.floor(p * 100)} %`;
-      return `<div class="sys">
-        <div class="row" style="align-items:baseline"><span class="sys__title">${Util.esc(sys.title)}</span><span class="small ${p >= 1 ? 'sys__done' : 'faint'}">${status}</span></div>
-        <div class="progress"><span style="width:${(p * 100).toFixed(1)}%"></span></div>
-        <span class="sys__text">${Util.esc(started ? sys.after : `${sys.before} Après l’arrêt : ${sys.after.charAt(0).toLowerCase()}${sys.after.slice(1)}`)}</span>
-      </div>`;
+      const when = sys.h < 48 ? `${sys.h} h` : sys.h < 24 * 60 ? `${Math.round(sys.h / 24)} j` : `${Math.round(sys.h / 24 / 30)} mois`;
+      const status = !started ? `sous ${when}` : p >= 1 ? '✓' : `${Math.floor(p * 100)} %`;
+      return `<details class="sysrow"><summary${started ? '' : ' class="sysrow--plan"'}>
+          <span class="sysrow__title">${Util.esc(sys.title)}</span>
+          ${started ? `<span class="sysrow__bar"><span style="width:${(p * 100).toFixed(1)}%"></span></span>` : ''}
+          <span class="sysrow__val${p >= 1 ? ' is-done' : ''}">${status}</span></summary>
+        <p class="sysrow__text">${Util.esc(started ? sys.after : sys.before)}</p></details>`;
     }).join('');
-    return rows;
+    return `<section class="card" style="gap:6px">
+      <h2 class="sec-h">${started ? 'Ton corps récupère' : 'Ce qui récupère après l’arrêt'}</h2>
+      ${rows}
+    </section>`;
   },
+
+  /**
+   * Repères en frise horizontale (6 étapes autour de celle en cours) ;
+   * la liste détaillée reste à un toucher.
+   */
+  milestoneStrip(states, done) {
+    const i = Math.max(0, Math.min(states.length - 6, done - 3));
+    const win = states.slice(i, i + 6);
+    const lastDone = win.map((m) => m.state).lastIndexOf('done');
+    const fill = win.length > 1 ? Math.max(0, lastDone) / (win.length - 1) : 0;
+    const short = (t) => t.replace(' semaines', ' sem').replace(' semaine', ' sem').replace(' heures', ' h').replace(' heure', ' h').replace(' jours', ' j').replace(' jour', ' j');
+    return `<section class="stack" style="gap:12px">
+      <div class="row" style="align-items:baseline"><h2 class="sec-h">Repères</h2><span class="small faint">${done} sur ${states.length}</span></div>
+      <div class="mstrip" style="--n:${win.length};--fill:${fill.toFixed(3)}">${win.map((m) => `<div class="mstrip__node mstrip--${m.state}"><span></span><span class="mstrip__t">${Util.esc(short(m.title))}</span></div>`).join('')}</div>
+      <details class="mstrip__all"><summary>Tous les repères</summary>${Screens.timeline(states)}</details>
+    </section>`;
+  },
+
+
 
   corpsNote() {
     return '<p class="tiny faint">Durées indicatives, variables d’une personne à l’autre. Pas un avis médical.</p>';
@@ -3425,13 +3480,13 @@ const Screens = {
     return `<div class="screen corps">
       <h1 class="title">Corps</h1>
       <section class="card" style="gap:12px">
-        <h2 class="sec-title">La nicotine dans ton corps</h2>
+        <h2 class="sec-h">La nicotine dans ton corps</h2>
         <p class="body-text" style="color:var(--text)">${Util.esc(intro)}</p>
         <ul class="effects">${Calc.forUsage(NICOTINE_EFFECTS, usage).slice(0, 4).map((e) => `<li>${Util.esc(e.text)}</li>`).join('')}</ul>
         <p class="body-text" style="color:var(--mint)">La plupart s’inversent après l’arrêt.</p>
       </section>
-      ${Screens.systemsCard(0, false)}
-      ${Screens.fold('Repères après l’arrêt', Screens.timeline(list.map((m) => ({ ...m, state: 'future' }))), `${list.length} étapes, de la 1re heure à 1 an`)}
+      ${Screens.systemsCompact(0, false)}
+      ${Screens.milestoneStrip(list.map((m) => ({ ...m, state: 'future' })), 0)}
       ${Screens.forYou('Pour toi')}
       <label class="btn btn--surface hap-btn" role="button" tabindex="0" data-hap="phase-ask" data-value="arret"><input type="checkbox" switch class="hap" tabindex="-1" aria-hidden="true">Passer en mode arrêt</label>
       ${Screens.corpsNote()}
