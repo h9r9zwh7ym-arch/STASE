@@ -42,7 +42,7 @@
   --line-2: #414C63;
   --text: #F1F3F8;
   --text-2: #B7C0D0;
-  --text-3: #8B95A8;
+  --text-3: #959FB2;
   --mint: #9FE8D2;
   --on-mint: #0F2A23;
   --mint-dim: rgba(159, 232, 210, 0.14);
@@ -80,8 +80,8 @@
   --line-2: #C3CAD7;
   --text: #151B27;
   --text-2: #4A5568;
-  --text-3: #646F82;
-  --mint: #17765E;
+  --text-3: #5B6678;
+  --mint: #136B55;
   --on-mint: #FFFFFF;
   --mint-dim: rgba(23, 118, 94, 0.10);
   --mint-line: rgba(23, 118, 94, 0.32);
@@ -379,7 +379,7 @@ details.benefit[open] .benefit__more { display: none; }
 .sec-h { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
 .range-head { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 .segmented--range button { min-height: 44px; font-size: 15px; }
-.segmented--range button[aria-pressed="true"] { background: var(--mint); color: var(--on-mint); }
+:root .segmented.segmented--range button[aria-pressed="true"] { background: var(--mint); color: var(--on-mint); }
 .stats-sec { margin-top: 10px; margin-bottom: -10px; }
 .chips-soft { display: flex; flex-wrap: wrap; gap: 8px; }
 .procon { text-decoration: none; color: inherit; gap: 12px; }
@@ -387,7 +387,7 @@ details.benefit[open] .benefit__more { display: none; }
 .procon__side { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; }
 .procon__side--minus { background: rgba(247, 198, 163, 0.12); }
 .procon__side--plus { background: var(--mint-dim); }
-.procon__k { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.procon__k { font-size: 12px; font-weight: 700; color: var(--text-2); }
 .procon__v { font-family: var(--font-num); font-size: 18px; font-weight: 600; }
 .procon__side--minus .procon__v { color: var(--warm); }
 .procon__side--plus .procon__v { color: var(--mint); }
@@ -521,12 +521,14 @@ details.benefit[open] .benefit__more { display: none; }
 .cal__day { aspect-ratio: 1; min-width: 0; border: 0; border-radius: 10px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   background: var(--surface-2); color: var(--text-2); font-family: var(--font-num); font-size: 13px; font-weight: 600; }
 .cal__day i { font-style: normal; font-size: 10px; opacity: 0.85; }
-.cal--future { background: transparent; color: var(--text-3); opacity: 0.5; }
+.cal--future { background: transparent; color: var(--text-3); }
 .cal--none { background: transparent; border: 1px dashed var(--line); }
 .cal--level1 { background: color-mix(in srgb, var(--data) 30%, var(--surface-2)); color: var(--text); }
 .cal--level2 { background: color-mix(in srgb, var(--data) 55%, var(--surface-2)); color: var(--text); }
 .cal--level3 { background: color-mix(in srgb, var(--data) 80%, var(--surface-2)); color: var(--text); }
 .cal--level4 { background: var(--data); color: #fff; box-shadow: inset 0 0 0 1.5px var(--data-hi); }
+:root[data-theme="light"] .cal--level4 { color: var(--text); }
+.cal__day i { opacity: 1; }
 .cal--clean { background: var(--mint); color: var(--on-mint); }
 .cal--used { background: var(--line); color: var(--text-2); }
 .cal--today { background: transparent; border: 1.5px dashed var(--mint); color: var(--mint); }
@@ -779,7 +781,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.11.0';
+const APP_VERSION = '2.12.0';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -1208,8 +1210,9 @@ Calc.prosCons = function (data) {
   const usage = Calc.usage(s, data.intakes);
   const yearly = Calc.yearlyCost(s, data.intakes, data.vapeMl, today);
   const rate = Calc.dailyRate(s, data.intakes);
-  const avg = Calc.avgPerDay(data.intakes, today, 7);
-  const mlAvg = Calc.mlAverage(data.vapeMl, Dates.addDays(today, -7), Dates.addDays(today, -1));
+  // mêmes 30 jours que le coût annuel et le rythme, pour des chiffres cohérents entre eux
+  const avg = Calc.avgPerDay(data.intakes, today, 30);
+  const mlAvg = Calc.mlAverage(data.vapeMl, Dates.addDays(today, -30), Dates.addDays(today, -1));
   const mg = (avg && s.snusMg > 0 && Calc.tracks('snus', s, data.intakes) ? avg.snus * s.snusMg : 0) + (mlAvg && s.vapeMgPerMl > 0 && Calc.tracks('vape', s, data.intakes) ? mlAvg.ml * s.vapeMgPerMl : 0);
   const first = (t) => t.split(/(?<=\.)\s/)[0];
   const rest = (t) => t.split(/(?<=\.)\s/).slice(1).join(' ');
@@ -1961,7 +1964,8 @@ Object.assign(Calc, {
     if (Dates.diffDays(from, red.startDate) > 0) from = red.startDate;
     const to = Dates.addDays(todayKey, -1);
     if (Dates.diffDays(from, to) < 0) return [];
-    return Calc.dailyCounts(intakes, from, to).map((d) => {
+    // un jour sans prise notée est oublié : il ne compte ni comme réussi ni comme dépassé
+    return Calc.dailyCounts(intakes, from, to).filter((d) => d.total > 0).map((d) => {
       const target = Calc.reductionTarget(red, d.key);
       return { key: d.key, total: d.total, target, ok: d.total <= target };
     });
@@ -2638,7 +2642,6 @@ const Screens = {
       <section class="stack" style="gap:0">
         <div class="row" style="padding-bottom:8px">
           <h2 style="font-size:15px">${isToday ? 'Prises du jour' : 'Prises de ce jour'}</h2>
-          ${list.length ? '<span class="small faint">Touche pour modifier</span>' : ''}
         </div>
         ${list.length ? list.slice().reverse().map(Screens.intakeRow).join('') : Screens.todayEmpty(isToday)}
         <button type="button" class="link" data-action="new-intake" style="align-self:center">${isToday ? 'Ajouter une prise oubliée' : 'Ajouter une prise ce jour-là'}</button>
@@ -2673,7 +2676,7 @@ const Screens = {
   todayRhythm(list) {
     const parts = [];
     const last = list.length ? list[list.length - 1].ts : null;
-    if (last) parts.push(`dernière il y a <span class="num" data-live="since-last">${Screens.agoShort(Date.now() - last)}</span>`);
+    if (last) parts.push(`<span data-live="since-last">${Screens.agoShort(Date.now() - last)}</span>`);
     const usual = Calc.usualByNow(Store.data.intakes, Dates.todayKey());
     if (usual !== null && usual >= 0.5) parts.push(`d’habitude à cette heure : ${Util.formatNum(usual, 1)}`);
     return parts.length ? `<p class="small faint">${parts.join(' · ')}</p>` : '';
@@ -2681,7 +2684,8 @@ const Screens = {
 
   agoShort(ms) {
     const m = Math.max(0, Math.floor(ms / 60000));
-    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${Dates.pad(m % 60)}`;
+    if (m < 1) return 'dernière à l’instant';
+    return `dernière il y a ${m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${Dates.pad(m % 60)}`}`;
   },
 
   /** Boutons de relevé : un seul, plus large, si un seul produit est suivi. */
@@ -2715,7 +2719,7 @@ const Screens = {
       <header class="header"><h1 class="title">Le pour et le contre</h1>
         <a class="icon-btn" href="#/aujourdhui" aria-label="Retour à Aujourd’hui">${Icon.close}</a></header>
       ${pr.done ? '' : `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
-        <strong>Rends cette page personnelle</strong><span class="small muted">Quatre questions (tension, stress, sommeil…) et elle s’adapte à toi.</span></a>`}
+        <strong>Personnaliser</strong><span class="small muted">Quatre questions : tension, stress, sommeil…</span></a>`}
       <section class="stack" style="gap:10px">
         <h2 class="sec-h" style="color:var(--warm)">Ce que la nicotine te coûte</h2>
         <ul class="pc-list card">${pc.cons.map((x) => item(x, 'minus')).join('')}</ul>
@@ -2739,7 +2743,6 @@ const Screens = {
     return `<div class="screen">
       <header class="header"><h1 class="title">Historique</h1>
         <a class="icon-btn" href="#/${App.historyBack || 'reglages'}" aria-label="Retour">${Icon.close}</a></header>
-      <p class="small muted">Touche une prise pour corriger son heure, son type ou son contexte, ou pour la supprimer.</p>
       ${shown.length ? shown.map((k) => `<section class="stack" style="gap:0" id="jour-${k}">
           <div class="row" style="padding:8px 0"><span class="label">${Util.esc(Dates.formatDayLong(Dates.keyToStart(k)))}</span>
             <span class="small faint">${byDay[k].length}</span></div>
@@ -3369,7 +3372,7 @@ const Screens = {
         <div class="ghost-chart">${Charts.bars(ghost, { height: 120, aria: 'Exemple de graphe' })}</div>
         <div class="stack" style="gap:8px">
           <strong>Les graphes se dessinent avec le temps.</strong>
-          <span class="small muted">Après 3 jours de relevés, tu verras tes moyennes, tes heures et tes déclencheurs. Pas besoin d'être précis : un tap par prise suffit.</span>
+          <span class="small muted">Moyennes, heures et déclencheurs apparaissent après 3 jours de relevés.</span>
         </div>
       </section>
       <section class="card">
@@ -3508,7 +3511,7 @@ const Screens = {
       const y = Calc.yearlyCost(st, intakes, Store.data.vapeMl);
       return Screens.benefitCard('Ton argent', y !== null
         ? `Au rythme ${st.phase === 'arret' ? 'd’avant l’arrêt' : 'actuel'}, la nicotine coûte environ ${Util.formatMoney(y, 0)} par an.${st.phase === 'arret' ? ' Le compteur « Économisé » le montre jour après jour.' : ''}`
-        : 'Renseigne le prix du snus et de la vape dans les Réglages pour voir combien ça représente sur un an.');
+        : 'Prix à renseigner dans les Réglages.');
     }
     if (key === 'liberte') {
       const r = Calc.dailyRate(st, intakes);
@@ -3532,7 +3535,7 @@ const Screens = {
       <div class="card bf-list">${cards}</div></section>`;
     return `<a class="card card--outline" href="#/bienvenue" data-action="quiz-start" style="text-decoration:none;color:inherit;gap:6px">
       <strong>Personnalise tes bénéfices</strong>
-      <span class="small muted">Quatre questions (tension, stress, sommeil…) pour voir ce que l'arrêt peut t'apporter, à toi.</span></a>`;
+      <span class="small muted">Quatre questions : tension, stress, sommeil…</span></a>`;
   },
 
   /** Corps — en arrêt : progression, étape du moment, récupération, bénéfices, repères. */
@@ -3856,7 +3859,6 @@ const IntakeSheet = {
     return `
       <div class="stack" style="gap:6px">
         <h2 class="title" style="font-size:22px">${title}</h2>
-        ${st.mode === 'context' ? '<p class="small muted">Facultatif. Ça aide à repérer tes moments.</p>' : ''}
       </div>
       ${st.mode === 'context' ? '' : IntakeSheet.whenHtml(st)}
       ${IntakeSheet.triggersHtml(st.trigger, Calc.suggestTrigger(Store.data.intakes, st.ts))}
@@ -4460,7 +4462,7 @@ const Update = {
    Cell — la cellule d'Aujourd'hui, animée par ressorts (vitesse toujours continue)
    ========================================================================= */
 const Cell = {
-  sim: { size: null, sizeV: 0, s: 0, sv: 0, b: { snus: 0, vape: 0 }, bv: { snus: 0, vape: 0 }, drops: [], pending: 0, numT: 1 },
+  sim: { size: null, sizeV: 0, s: 0, sv: 0, b: { snus: 0, vape: 0 }, bv: { snus: 0, vape: 0 }, drops: [], pending: 0, numT: 1, flash: 0 },
   els: null,
   raf: null,
   last: 0,
@@ -4475,7 +4477,8 @@ const Cell = {
     if (!wrap || !btn || Anim.reduced()) return;
     const w = wrap.getBoundingClientRect(), r = btn.getBoundingClientRect();
     const m = Cell.sim;
-    m.bv[type] = (m.bv[type] || 0) - 3; // l'appui écrase le bouton, qui rebondit tout seul
+    m.bv[type] = (m.bv[type] || 0) - 4.6; // appui franc : le bouton s'écrase puis rebondit tout seul
+    m.flash = 1;
     m.drops.push({ type, x: r.left + r.width / 2 - w.left, y: r.top - w.top + 22, vx: 0, vy: -260, r: 0, age: 0, merged: false, el: null });
     m.pending++;
   },
@@ -4523,7 +4526,7 @@ const Cell = {
     const target = Cell.els ? Cell.size(Cell.els.total - m.pending) : m.size;
     return m.drops.length > 0 || Math.abs(m.s) > 0.002 || Math.abs(m.sv) > 0.01 || m.numT < 1
       || Math.abs(target - m.size) > 0.3 || Math.abs(m.sizeV) > 0.3
-      || ['snus', 'vape'].some((t) => Math.abs(m.b[t]) > 0.001 || Math.abs(m.bv[t]) > 0.01);
+      || m.flash > 0 || ['snus', 'vape'].some((t) => Math.abs(m.b[t]) > 0.001 || Math.abs(m.bv[t]) > 0.01);
   },
 
   start() {
@@ -4547,9 +4550,10 @@ const Cell = {
     const cx = e.wrap.clientWidth / 2, cy = Cell.CY, R = m.size / 2;
     const target = Cell.size(e.total - m.pending);
     // ressorts vifs : la goutte arrive en ~0,35 s, la cellule ondule et s'apaise en ~0,8 s
-    m.sizeV += (170 * (target - m.size) - 22 * m.sizeV) * dt; m.size += m.sizeV * dt;
+    m.sizeV += (420 * (target - m.size) - 30 * m.sizeV) * dt; m.size += m.sizeV * dt;
+    if (m.flash > 0) m.flash = Math.max(0, m.flash - dt / 0.28);
     m.sv += (-260 * m.s - 10 * m.sv) * dt; m.s += m.sv * dt;
-    ['snus', 'vape'].forEach((t) => { m.bv[t] += (-420 * m.b[t] - 22 * m.bv[t]) * dt; m.b[t] += m.bv[t] * dt; });
+    ['snus', 'vape'].forEach((t) => { m.bv[t] += (-520 * m.b[t] - 20 * m.bv[t]) * dt; m.b[t] += m.bv[t] * dt; });
     if (m.numT < 1) m.numT = Math.min(1, m.numT + dt / 0.3);
     m.drops.forEach((d) => {
       d.age += dt;
@@ -4562,6 +4566,7 @@ const Cell = {
       if (!d.merged && dist < R * 0.75) {
         d.merged = true;
         m.sv += Math.min(1.3, Math.hypot(d.vx, d.vy) / 420); // l'impact dépend de la vitesse
+        m.sizeV += 260; // la cellule gonfle d'un coup puis se pose
         m.pending = Math.max(0, m.pending - 1);
         m.numT = 0;
         Cell.showCount();
@@ -4588,7 +4593,8 @@ const Cell = {
     e.cell.style.transform = `translateY(${(lean * 6).toFixed(2)}px) scale(${(k * sx).toFixed(4)}, ${(k * sy).toFixed(4)})`;
     e.text.style.transform = `translateY(-50%) scale(${((sx + sy) / 2).toFixed(4)})`;
     ['snus', 'vape'].forEach((t) => {
-      const tr = `scale(${(1 - m.b[t] * 0.5).toFixed(4)}, ${(1 + m.b[t]).toFixed(4)})`;
+      const tr = `scale(${(1 - m.b[t] * 0.45).toFixed(4)}, ${(1 + m.b[t] * 1.1).toFixed(4)})`;
+      if (e.skins[t]) e.skins[t].style.filter = m.flash > 0 && m.drops.some((d) => d.type === t) ? `brightness(${(1 + m.flash * 0.18).toFixed(3)})` : '';
       if (e.gooBtns[t]) {
         e.gooBtns[t].style.transform = tr;
         // seul le bouton qui donne la goutte entre dans la fusion (sinon les deux boutons se colleraient)
