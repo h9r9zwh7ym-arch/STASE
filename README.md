@@ -1,6 +1,6 @@
 # STASE
 
-**Version 2.12**
+**Version 2.12.1**
 
 Web app perso pour iPhone : suivre sa consommation de nicotine (snus et vape), d'abord pour **observer**, puis pour **arrêter**. Sobre, sans culpabilisation, tout reste sur le téléphone.
 

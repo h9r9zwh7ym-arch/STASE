@@ -70,7 +70,11 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Sous la barre d'onglets : la barre d'accueil d'iOS n'a pas besoin de toute la marge de sécurité. */
-  --bar-pad: max(calc(var(--safe-bottom) - 20px), 6px);
+  /* --vp-gap : bande que certains iPhone (web app plein écran) laissent sous la zone d'affichage ;
+     mesurée au lancement. La barre d'onglets et les feuilles descendent jusqu'au vrai bas de l'écran. */
+  --vp-gap: 0px;
+  --bar-pad: max(calc(max(var(--safe-bottom), var(--vp-gap)) - 20px), 6px);
+  --bar-in: calc(var(--tabbar-h) + 4px + var(--bar-pad) - var(--vp-gap));
 }
 :root[data-theme="light"] {
   --bg: #F5F6FA;
@@ -136,7 +140,7 @@ h1, h2, h3, p { margin: 0; }
   overscroll-behavior: contain;
   touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
-  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--tabbar-h) + 4px + var(--bar-pad) + 96px);
+  padding: calc(var(--safe-top) + 20px) var(--gutter) calc(var(--bar-in) + 96px);
 }
 .tabbar, .fab, .scrim { touch-action: none; }
 .sheet { overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
@@ -146,7 +150,7 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 .screen--today > :not(.ambient) { position: relative; }
 
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  position: fixed; left: 0; right: 0; bottom: calc(-1 * var(--vp-gap)); z-index: 20;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 4px 4px var(--bar-pad);
   background: var(--bar);
@@ -163,12 +167,12 @@ body.no-chrome #view { padding-bottom: calc(var(--safe-bottom) + 32px); }
 body.mode-obs .tabbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 body.mode-obs .tab[data-tab="corps"] { display: none; }
 body.no-chrome .tabbar, body.no-chrome .fab, body.no-fab .fab { display: none; }
-body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 28px); }
-body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 16px); }
+body.no-fab:not(.no-chrome) #view { padding-bottom: calc(var(--bar-in) + 28px); }
+body.no-fab:not(.no-chrome) .toast { bottom: calc(var(--bar-in) + 16px); }
 
 .fab {
   position: fixed; left: 50%; z-index: 21;
-  bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 18px);
+  bottom: calc(var(--bar-in) + 18px);
   transform: translateX(-50%);
   height: 52px; padding: 0 22px; border-radius: 26px;
   display: flex; align-items: center; gap: 10px; white-space: nowrap;
@@ -593,10 +597,10 @@ details.benefit[open] .benefit__more { display: none; }
    ========================================================================= */
 .scrim { position: fixed; inset: 0; z-index: 40; background: var(--scrim); opacity: 0; transition: opacity .15s; }
 .sheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
+  position: fixed; left: 0; right: 0; bottom: calc(-1 * var(--vp-gap)); z-index: 41;
   max-height: calc(100dvh - var(--safe-top) - 24px); overflow-y: auto;
   background: var(--sheet); border-top: 1px solid var(--line); border-radius: 28px 28px 0 0;
-  padding: 12px var(--gutter) calc(var(--safe-bottom) + 28px);
+  padding: 12px var(--gutter) calc(max(var(--safe-bottom), var(--vp-gap)) + 28px);
   display: flex; flex-direction: column; gap: 22px;
   transform: translateY(100%); transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -607,7 +611,7 @@ details.benefit[open] .benefit__more { display: none; }
 
 .toast {
   position: fixed; left: 50%; z-index: 50;
-  bottom: calc(var(--tabbar-h) + 4px + var(--bar-pad) + 84px);
+  bottom: calc(var(--bar-in) + 84px);
   transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
   width: min(calc(100% - 32px), 440px); min-height: 52px; padding: 4px 8px 4px 18px; border-radius: 16px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -666,6 +670,8 @@ details.benefit[open] .benefit__more { display: none; }
 .goo-btn { height: 104px; border-radius: 32px; background: linear-gradient(180deg, #B2EEDC 0%, #9FE8D2 60%, #92E0C9 100%); transform-origin: 50% 100%; }
 .cell-btns .log-btn { height: 104px; border-radius: 32px; border-color: transparent; background: transparent; color: #0F2A23; transform-origin: 50% 100%; transition: none; }
 .cell-btns .log-btn:active { background: transparent; transform: none; }
+.cell-btns .log-btn--ghost { background: transparent; border: 1.5px dashed var(--line-2); color: var(--text-2); font-size: 18px; }
+.cell-btns .log-btn--ghost:active { background: var(--surface); }
 .cell-drop { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 50%; background: #B4EEDD; will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .cell__body { animation: none; } }
 
@@ -781,7 +787,7 @@ details.benefit[open] .benefit__more { display: none; }
 /* =========================================================================
    Constantes
    ========================================================================= */
-const APP_VERSION = '2.12.0';
+const APP_VERSION = '2.12.1';
 const STORAGE_KEY = 'stase.v1';
 const BACKUP_KEY = 'stase.backup';
 const SCHEMA_VERSION = 1;
@@ -2622,10 +2628,7 @@ const Screens = {
 
       <section class="stack" style="gap:6px">
         ${Screens.dayNav(key, isToday)}
-        ${isToday ? Screens.cellStage(c.total) : `<div class="counter">
-          <span class="big-number">${c.total}</span>
-          <span class="muted">${c.total > 1 ? 'prises' : 'prise'} ce jour-là</span>
-        </div>`}
+        ${Screens.cellStage(c.total, key, isToday)}
         ${(() => {
           const both = Calc.usage(Store.data.settings, Store.data.intakes) === 'both' || (c.snus && c.vape);
           const parts = (both ? [`${c.snus} snus`, `${c.vape} vape`] : [])
@@ -2656,16 +2659,17 @@ const Screens = {
    * Les boutons sont juste dessous ; une prise ajoutée part du bouton en goutte
    * et se fond dans la cellule (moteur Cell, plus bas).
    */
-  cellStage(total) {
-    const types = ['snus', 'vape'].filter((t) => Calc.tracks(t));
-    return `<section class="cellwrap no-enter" data-total="${total}" style="--n:${types.length}">
+  cellStage(total, key = Dates.todayKey(), isToday = true) {
+    const types = isToday ? ['snus', 'vape'].filter((t) => Calc.tracks(t)) : [];
+    const when = isToday ? 'aujourd’hui' : 'ce jour-là';
+    return `<section class="cellwrap no-enter" data-total="${total}" data-day="${key}" data-when="${when}" style="--n:${Math.max(1, types.length)}">
       <div class="goo-btns btn-skins" aria-hidden="true">${types.map((t) => `<div class="goo-btn" data-stype="${t}"></div>`).join('')}</div>
       <div class="goo-layer" aria-hidden="true">
         <div class="cell" style="--k:${(Cell.size(total) / 220).toFixed(3)}"><div class="cell__body"></div></div>
         <div class="goo-btns">${types.map((t) => `<div class="goo-btn" data-gtype="${t}"></div>`).join('')}</div>
       </div>
-      <div class="cell__text"><span class="cell__num">${total}</span><span class="cell__label">${total > 1 ? 'prises' : 'prise'} aujourd’hui</span></div>
-      <div class="cell-btns">${Screens.logButtons(true)}</div>
+      <div class="cell__text"><span class="cell__num">${total}</span><span class="cell__label">${total > 1 ? 'prises' : 'prise'} ${when}</span></div>
+      <div class="cell-btns">${isToday ? Screens.logButtons(true) : `<button type="button" class="log-btn log-btn--ghost" data-action="new-intake">${Icon.plus}Prise oubliée</button>`}</div>
     </section>`;
   },
 
@@ -4462,7 +4466,8 @@ const Update = {
    Cell — la cellule d'Aujourd'hui, animée par ressorts (vitesse toujours continue)
    ========================================================================= */
 const Cell = {
-  sim: { size: null, sizeV: 0, s: 0, sv: 0, b: { snus: 0, vape: 0 }, bv: { snus: 0, vape: 0 }, drops: [], pending: 0, numT: 1, flash: 0 },
+  sim: { size: null, sizeV: 0, s: 0, sv: 0, b: { snus: 0, vape: 0 }, bv: { snus: 0, vape: 0 }, drops: [], pending: 0, numT: 1, numDir: 0, flash: 0 },
+  lastDay: null,
   els: null,
   raf: null,
   last: 0,
@@ -4502,6 +4507,13 @@ const Cell = {
       btns: Object.fromEntries([...wrap.querySelectorAll('.cell-btns .log-btn')].map((e) => [e.dataset.type, e]))
     };
     if (m.size === null) m.size = Cell.size(total - m.pending);
+    // Changement de jour (flèches) : le chiffre glisse dans le sens du temps et la cellule se reforme.
+    const day = wrap.dataset.day;
+    if (Cell.lastDay && day !== Cell.lastDay && !Anim.reduced()) {
+      m.numT = 0; m.numDir = day > Cell.lastDay ? 1 : -1;
+      m.sv += 0.5;
+    }
+    Cell.lastDay = day;
     m.drops.forEach((d) => {
       d.el = document.createElement('span');
       d.el.className = 'cell-drop';
@@ -4518,7 +4530,7 @@ const Cell = {
     if (!e) return;
     const n = e.total - Cell.sim.pending;
     e.num.textContent = n;
-    e.label.textContent = `${n > 1 ? 'prises' : 'prise'} aujourd’hui`;
+    e.label.textContent = `${n > 1 ? 'prises' : 'prise'} ${e.wrap.dataset.when || 'aujourd’hui'}`;
   },
 
   busy() {
@@ -4568,7 +4580,7 @@ const Cell = {
         m.sv += Math.min(1.3, Math.hypot(d.vx, d.vy) / 420); // l'impact dépend de la vitesse
         m.sizeV += 260; // la cellule gonfle d'un coup puis se pose
         m.pending = Math.max(0, m.pending - 1);
-        m.numT = 0;
+        m.numT = 0; m.numDir = 0;
         Cell.showCount();
       }
     });
@@ -4605,7 +4617,8 @@ const Cell = {
     });
     const ease = 1 - Math.pow(1 - m.numT, 3);
     e.num.style.opacity = m.numT < 1 ? (0.2 + 0.8 * ease).toFixed(3) : '';
-    e.num.style.transform = m.numT < 1 ? `translateY(${((1 - ease) * 10).toFixed(2)}px) scale(${(1 + Math.sin(m.numT * Math.PI) * 0.08).toFixed(4)})` : '';
+    const move = m.numDir ? `translateX(${((1 - ease) * 28 * m.numDir).toFixed(2)}px)` : `translateY(${((1 - ease) * 10).toFixed(2)}px)`;
+    e.num.style.transform = m.numT < 1 ? `${move} scale(${(1 + Math.sin(m.numT * Math.PI) * 0.08).toFixed(4)})` : '';
     m.drops.forEach((d) => {
       if (!d.el) return;
       // taille et étirement par transform seulement (pas de recalcul de mise en page)
@@ -4859,7 +4872,20 @@ const App = {
     Store.update((d) => { d.settings[key] = n; });
   },
 
+  /**
+   * Web app sur l'écran d'accueil : iOS peut arrêter la zone d'affichage au-dessus
+   * de la barre d'accueil. On mesure l'écart pour que la barre d'onglets aille jusqu'en bas.
+   */
+  measureGap() {
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    const portrait = window.innerHeight > window.innerWidth;
+    const gap = standalone && portrait ? Math.round(screen.height - window.innerHeight) : 0;
+    document.documentElement.style.setProperty('--vp-gap', `${gap > 0 && gap <= 80 ? gap : 0}px`);
+  },
+
   boot() {
+    App.measureGap();
+    window.addEventListener('resize', App.measureGap);
     Store.load();
     UI.applyTheme();
     if (navigator.storage && navigator.storage.persist) {
